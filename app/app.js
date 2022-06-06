@@ -1,15 +1,15 @@
 const express = require('express');
 const routes = require('../routes/api');
 const app = express();
-const databse = require('../config/database');
+const bodyParser = require('body-parser');
 
-// parse json request body
-app.use(express.json());
+app.use(bodyParser.urlencoded({ extended: true }))
+// parse application/json
+app.use(bodyParser.json())
 
 // v1 api routes
 app.use('/api/v1', routes);
 
-//mysql connection
-//databse.connection();
+
 
 module.exports = app;

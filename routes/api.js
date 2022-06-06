@@ -1,11 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const database = require('../config/database')
+const db = require('../config/database')
+const knex = require('knex');
 
 const routes = [
     {
         path: '/',
-        route: (req, res)=>{
+        route: async (req, res)=>{
+
             res.send("hello");
         },
     },

@@ -1,14 +1,8 @@
 const mysql = require('mysql');
-
+const knexFile = require('../knexfile');
+const knex = require('knex');
 // Create the connection pool. The pool-specific settings are the defaults
-const database = mysql.createPool({
-    host: 'localhost',
-    user: 'root',
-    database: 'vclassroom',
-    secret: '',
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
-});
 
-module.exports = database;
+const db = knex(knexFile);
+
+module.exports = db;

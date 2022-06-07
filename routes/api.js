@@ -1,16 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../config/database')
-const knex = require('knex');
+const defaultRoute = require('./default.route')
+
 
 const routes = [
     {
         path: '/',
-        route: async (req, res)=>{
-
-            res.send("hello");
-        },
-    },
+        route:defaultRoute
+    }
 
 ];
 

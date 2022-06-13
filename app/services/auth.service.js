@@ -49,7 +49,12 @@ const getAuthUser = async (userId, guard = 'default') => {
         .first();
 }
 
+const logout = async (req) => {
+    return await tokenService.invalidateToken(req);
+}
+
 module.exports = {
     authAttempt,
     getAuthUser,
+    logout
 }

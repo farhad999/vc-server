@@ -50,7 +50,29 @@ const verifyToken = async (req, tokenType) => {
   return [verified, error];
 };
 
+const invalidateToken = async (req) => {
+
+    const bearerHeader = req.headers["authorization"];
+
+    const token = bearerHeader && bearerHeader.split(' ')[1];
+
+    let status = '', error = '';
+
+    try{
+        await db('tokens')
+            .where({token: token})
+            .delete();
+        status = 'success';
+    }
+    catch (er){
+        error = er;
+    }
+
+    return [status, error];
+}
+
 module.exports = {
   generateToken,
   verifyToken,
+  invalidateToken
 };

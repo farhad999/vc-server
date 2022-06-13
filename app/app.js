@@ -3,9 +3,13 @@ const routes = require('../routes/api');
 const app = express();
 const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
+const cors = require('cors');
 
 //env
 dotenv.config();
+
+//cors
+app.use(cors());
 
 app.use(bodyParser.urlencoded({ extended: true }))
 // parse application/json

@@ -23,9 +23,9 @@ const logout = async (req, res) => {
 
     let [status, error] = await authService.logout(req);
 
-    if(status === 'success'){
+    if (status === 'success') {
         res.json({status: status, message: 'Logged Out Successful'})
-    }else{
+    } else {
         return res.json({status: 'failed', message: 'Log Out Error'});
     }
 

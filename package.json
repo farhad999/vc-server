@@ -22,6 +22,7 @@
     "joi": "^17.6.0",
     "jsonwebtoken": "^8.5.1",
     "knex": "^2.1.0",
+    "knex-paginate": "^3.0.1",
     "moment": "^2.29.3",
     "mysql": "^2.18.1",
     "nodemon": "^2.0.16",

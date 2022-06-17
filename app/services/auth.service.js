@@ -2,6 +2,7 @@ const authConfig = require('../../config/auth.config');
 const db = require('../../config/database');
 const Joi = require("joi");
 const tokenService = require("./token.service");
+const hashService = require('./hash.service');
 
 const authAttempt = async (loginData, guard = 'default') => {
 
@@ -21,10 +22,13 @@ const authAttempt = async (loginData, guard = 'default') => {
         let authType = authConfig.find(item => item.guard === guard);
 
         let user = await db(authType.table)
-            .where({email, password})
+            .where({email: email})
             .first();
 
-        if (user) {
+        let dbPass = user.password;
+        let checked = hashService.compare(password, dbPass);
+
+        if (user && checked) {
             token = await tokenService.generateToken(user.id);
         } else {
             error = "Email or Password Incorrect";

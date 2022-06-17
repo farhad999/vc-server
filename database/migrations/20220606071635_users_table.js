@@ -5,11 +5,14 @@
 exports.up = function(knex) {
   return knex.schema.createTable('users', (table)=> {
       table.increments();
-      table.string('name');
+      table.string('firstName');
+      table.string('lastName');
       table.string('email');
       table.text('password');
       table.enum('userType',['stuff', 'teacher', 'student']);
-      table.timestamps();
+      table.timestamps({useCamelCase: true, defaultToNow: true})
+      table.timestamp('deletedAt');
+
   })
 };
 

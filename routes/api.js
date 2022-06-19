@@ -4,23 +4,28 @@ const defaultRoute = require('./default.route');
 const userRoute = require('./user.route');
 const fakerRoute = require('./faker.route');
 const courseRoute = require('./course.route');
+const routineRoute = require('./routine.route');
 
 const routes = [
     {
-      path: '/courses',
-      route: courseRoute,
+        path: '/routines',
+        route: routineRoute
     },
     {
-      path: '/users',
-      route: userRoute,
+        path: '/courses',
+        route: courseRoute,
     },
     {
-      path: '/faker',
-      route: fakerRoute,
+        path: '/users',
+        route: userRoute,
+    },
+    {
+        path: '/faker',
+        route: fakerRoute,
     },
     {
         path: '/',
-        route:defaultRoute
+        route: defaultRoute
     }
 
 ];

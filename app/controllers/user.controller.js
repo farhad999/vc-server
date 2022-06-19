@@ -2,6 +2,36 @@ const db = require('../../config/database');
 const Joi = require('joi');
 const hashPassword = require('../services/hash.service')
 
+const index = async (req, res) => {
+
+    let {type, page, perPage} = req.query;
+
+    if (!page) {
+        page = 1;
+    }
+
+    if (perPage) {
+        perPage = 10;
+    }
+
+    let userQuery = db('users')
+        .select('users.id', 'users.firstName', 'users.lastName', 'users.email')
+        .where({userType: type})
+        .whereNull('deletedAt')
+        .orderBy('createdAt', 'desc')
+
+    if (type === 'student') {
+        userQuery.select('sd.session', 'sd.studentId', 'semesters.name as semesterName', '' +
+            'semesters.id as semesterId').leftJoin('student_details as sd', 'sd.userId', '=', 'users.id')
+            .join('semesters', 'semesters.id', '=', 'sd.semesterId');
+    }
+
+    let users = await userQuery.paginate({perPage: perPage, currentPage: page, isLengthAware: true});
+
+    return res.json(users);
+
+};
+
 const store = async (req, res) => {
 
     let schema = Joi.object({
@@ -169,5 +199,6 @@ const deleteUser = async (req, res) => {
 module.exports = {
     store,
     update,
-    deleteUser
+    deleteUser,
+    index,
 }

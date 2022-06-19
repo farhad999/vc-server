@@ -12,4 +12,6 @@ router.delete('/:id', [auth, hasPermission('user.delete')], userController.delet
 
 router.post('/', [auth, hasPermission('user.create')], userController.store);
 
+router.get('/', [auth, hasPermission('user.view')], userController.index );
+
 module.exports = router;

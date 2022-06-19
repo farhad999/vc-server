@@ -6,6 +6,8 @@ const userController = require('../app/controllers/user.controller')
 
 const router = express.Router();
 
+router.put('/:id', [auth, hasPermission('user.update')], userController.update);
+
 router.post('/', [auth, hasPermission('user.create')], userController.store);
 
 module.exports = router;

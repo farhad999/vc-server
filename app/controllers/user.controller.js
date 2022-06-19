@@ -137,7 +137,7 @@ const update = async (req, res) => {
                     }
 
 
-                }else{
+                } else {
                     return res.json({er: error});
                 }
 
@@ -150,7 +150,24 @@ const update = async (req, res) => {
 
 }
 
+const deleteUser = async (req, res) => {
+    let {id} = req.params;
+
+    try {
+        await db('users')
+            .where({id})
+            .update({deletedAt: new Date(Date.now())});
+
+        return res.json({status: 'success', message: 'Deleted Successful'});
+
+    } catch (er) {
+        return res.json({status: 'failed', error: er})
+    }
+
+}
+
 module.exports = {
     store,
     update,
+    deleteUser
 }

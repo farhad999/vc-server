@@ -7,8 +7,8 @@ exports.up = function(knex) {
       table.increments();
       table.string('classId').notNullable();
       table.string('day').notNullable();
-      table.string('startTime').notNullable();
-      table.string('endTime').notNullable();
+      table.time('startTime').notNullable();
+      table.integer('periods').notNullable();
 
       table.foreign('classId').references('id').inTable('classes').onDelete('cascade');
   })

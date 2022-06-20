@@ -5,6 +5,9 @@ const routineController = require('../app/controllers/routine.controller')
 
 const router = express.Router();
 
+router.post('/:routineId/classes', [auth, hasPermission('routine.create')], routineController.addClass);
+
+router.get('/:routineId', [auth, hasPermission('routine.view')], routineController.viewRoutine);
 
 router.delete('/:routineId', [auth, hasPermission('routine.delete')], routineController.deleteRoutine);
 

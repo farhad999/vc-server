@@ -44,7 +44,7 @@ const getRoutines = async (req, res) => {
 
     let {page} = req.query;
 
-    if(!page){
+    if (!page) {
         page = 1;
     }
 
@@ -56,8 +56,74 @@ const getRoutines = async (req, res) => {
     return res.json(routines);
 }
 
+const update = async (req, res) => {
+
+    let {routineId} = req.params;
+
+    const schema = Joi.object({
+        name: Joi.string().required(),
+        status: Joi.string().required()
+    });
+
+    let {error, value} = schema.validate(req.body);
+
+    // return  res.json({er: error});
+
+    if (!error) {
+
+        let routine = await db('routines')
+            .where({id: routineId})
+            .first();
+
+        if (!routine) {
+            return res.json({status: 'failed', error: 'Routine Not Found'});
+        }
+
+        try {
+            await db('routines')
+                .update(value)
+                .where({id: routineId});
+
+            return res.json({status: 'success', message: 'Routine Updated'});
+        } catch (er) {
+            return res.json({status: 'failed', error: er});
+        }
+    } else {
+        return res.json({status: 'failed', error: error});
+    }
+
+}
+
+const deleteRoutine = async (req, res) => {
+
+    let {routineId} = req.params;
+
+    let routine = await db('routines')
+        .where({id: routineId})
+        .first();
+
+    if(!routine){
+        return res.json({status: 'failed', error: 'Routine Not Found'});
+    }
+
+    try{
+
+        await db('routines')
+            .update({deletedAt: new Date(Date.now())})
+            .where({id: routineId});
+
+        return res.json({status: 'success', message: 'Routine Deleted Successful'});
+
+    }catch (er){
+        return res.json({status: 'failed', error: er});
+    }
+
+}
+
 
 module.exports = {
     createRoutine,
-    getRoutines
+    getRoutines,
+    update,
+    deleteRoutine
 }

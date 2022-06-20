@@ -5,6 +5,8 @@ const routineController = require('../app/controllers/routine.controller')
 
 const router = express.Router();
 
+router.put('/:routineId/classes/:classId', [auth, hasPermission('routine.create')], routineController.updateClass);
+
 router.post('/:routineId/classes', [auth, hasPermission('routine.create')], routineController.addClass);
 
 router.get('/:routineId', [auth, hasPermission('routine.view')], routineController.viewRoutine);

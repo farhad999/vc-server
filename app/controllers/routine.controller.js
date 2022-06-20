@@ -2,6 +2,7 @@ const Joi = require("joi");
 const db = require("../../config/database");
 const moment = require("../../config/moment");
 const {faker} = require("@faker-js/faker");
+const routineService = require('../services/routine.service')
 
 const createRoutine = async (req, res) => {
 
@@ -217,6 +218,7 @@ const addClass = async (req, res) => {
 
         }
 
+
         let students = await db('courses')
             //.join('semesters', 'semesters.id', '=', 'courses.semesterId')
             .select('users.id')
@@ -256,6 +258,119 @@ const addClass = async (req, res) => {
     } else {
         return res.json({status: 'failed', error: error});
     }
+
+}
+
+const updateClass = async (req, res) => {
+
+    let {classId, routineId} = req.params;
+
+    let routine = await db('routines')
+        .where({id: routineId})
+        .first();
+
+    let class1 = await db('classes')
+        .where({id: classId})
+        .first();
+
+    if (!class1) {
+        return res.json({status: 'failed', error: 'Class does not exists'});
+    }
+
+    let schema = Joi.object({
+        courseId: Joi.number().required(),
+        teacherId: Joi.number().required(),
+        times: Joi.array().items({
+            id: Joi.number().required(),
+            day: Joi.string().required(),
+            startTime: Joi.string().required(),
+            periods: Joi.string().required(),
+        })
+    });
+
+    let {error, value} = schema.validate(req.body);
+
+    if (!error) {
+
+        let {courseId, teacherId, times} = value;
+
+        //check if course exists
+
+        let course = await db('courses')
+            .where({id: courseId})
+            .first();
+
+        if (!course) {
+            return res.json({status: 'failed', error: 'Course does not exists'})
+        }
+
+        //check is teacherId is exists
+
+        let isTeacherExists = await db('users')
+            .where({userType: 'teacher', id: teacherId})
+            .first();
+
+        if (!isTeacherExists) {
+            return res.json({status: 'failed', error: "Teacher is not exists"});
+        }
+
+        /* let [isValid, error] = routineService.isTimeValid(times);
+
+         if (!isValid) {
+             return res.json({status: 'failed', error: error})
+         }*/
+
+        if (!await routineService.isTimeOverlap(times, course, routine)) {
+            return res.json({status: 'failed', error: 'Time Overlap! Please check your class time'})
+        }
+
+        let dbDays = await db('class_times')
+            .where({classId: classId});
+
+        const trxProvider = db.transactionProvider();
+
+        const trx = await trxProvider();
+
+        try {
+
+            await trx('classes')
+                .update({teacherId, courseId})
+                .where({id: classId});
+
+            if (dbDays.length === times.length) {
+                for (let item of times) {
+
+                    await trx('class_times')
+                        .update({day: item.day, startTime: item.startTime, endTime: item.endTime})
+                        .where('id', '=', item.id)
+                        .where('classId', '=', classId);
+
+                }
+            } else {
+                await trx('class_times')
+                    .where({classId: classId})
+                    .delete();
+
+                let timesWithClass = times.map((item => ({...item, classId: classId})));
+
+                await trx('class_times').insert(timesWithClass);
+
+            }
+
+            trx.commit();
+
+            return res.json({status: 'success', message: 'Class Updated'});
+
+        } catch (error) {
+            trx.rollback();
+            return res.json({status: 'failed', error: error});
+        }
+
+
+    } else {
+        return res.json({status: 'failed', error: error})
+    }
+
 
 }
 
@@ -310,5 +425,6 @@ module.exports = {
     update,
     deleteRoutine,
     addClass,
-    viewRoutine
+    viewRoutine,
+    updateClass
 }

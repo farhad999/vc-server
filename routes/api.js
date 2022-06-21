@@ -5,11 +5,16 @@ const userRoute = require('./user.route');
 const fakerRoute = require('./faker.route');
 const courseRoute = require('./course.route');
 const routineRoute = require('./routine.route');
+const classroomRoute = require('./classroom.route')
 
 const routes = [
     {
         path: '/routines',
         route: routineRoute
+    },
+    {
+        path: '/c',
+        route: classroomRoute,
     },
     {
         path: '/courses',

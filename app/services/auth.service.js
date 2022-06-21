@@ -35,7 +35,6 @@ const authAttempt = async (loginData, guard = 'default') => {
         }
     }
 
-
     return [error, token];
 }
 
@@ -44,7 +43,7 @@ const getAuthUser = async (userId, guard = 'default') => {
     let authType = authConfig.find(item => item.guard = guard);
 
     return db(authType.table)
-        .select("id", "firstName", 'lastName', "email")
+        .select("id", "firstName", 'lastName', "email", "userType")
         .where({id: userId})
         .first();
 }

@@ -55,6 +55,33 @@ const hasRole = async (role, userId) => {
 
 }
 
+//get user permissions
+
+const rolePermissions = async (role) => {
+    return db('roles')
+        .select('permissions.name')
+        .join('role_permissions', 'role_permissions.roleId', '=', 'roles.id')
+        .join('permissions', 'permissions.id', '=', 'role_permissions.permissionId')
+        .where({'roles.name': role});
+}
+
+const getUserPermissions = async (id) => {
+
+    let role = await getUserRole(id);
+
+    let permissions = role ? await rolePermissions(role.name) : [];
+
+    let p = await db('permissions')
+        .select('permissions.name')
+        .join('user_permissions', 'user_permissions.permissionId', '=', 'permissions.id')
+        .join('users', 'users.id', '=', 'user_permissions.userId')
+        .where({'users.id': id});
+
+    return [role, [...permissions, ...p]];
+}
+
 module.exports = {
-    hasPermission
+    hasPermission,
+    getUserPermissions,
+    getUserRole
 }

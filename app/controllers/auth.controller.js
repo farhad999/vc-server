@@ -1,5 +1,6 @@
 const Joi = require('joi');
 const authService = require('../services/auth.service');
+const permissionService = require('../services/permission.service')
 
 const login = async (req, res) => {
 
@@ -8,6 +9,7 @@ const login = async (req, res) => {
     if (token) {
         return res.json({status: 'success', token: token});
     }
+
     return res.json({status: 'failed', error: error});
 
 }
@@ -15,6 +17,11 @@ const login = async (req, res) => {
 const getUser = async (req, res) => {
 
     const user = req.user;
+
+    let [role, permissions] = await permissionService.getUserPermissions(user.id);
+
+    user.role = role;
+    user.permissions = permissions;
 
     res.json({user: user});
 }

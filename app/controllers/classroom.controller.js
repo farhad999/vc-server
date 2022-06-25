@@ -12,7 +12,7 @@ const index = async (req, res) => {
         return res.json({status: 'failed'});
     }
 
-    return res.json({status: 'success', message: class1});
+    return res.json({status: 'success', message: req.user});
 }
 
 module.exports = {

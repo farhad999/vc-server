@@ -6,6 +6,8 @@ const auth = require('../app/middlewares/auth');
 
 const checkUserType = require('../app/middlewares/checkUserType.middleware')
 
-router.get('/:classId', [auth, checkUserType(['student', 'teacher'])], classroomController.index);
+const hasAccessInClass = require('../app/middlewares/hasAccessInClass.middleware');
+
+router.get('/:classId', [auth, checkUserType(['student', 'teacher']), hasAccessInClass], classroomController.index);
 
 module.exports = router;

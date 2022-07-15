@@ -11,6 +11,8 @@ router.post('/:routineId/classes', [auth, hasPermission('routine.create')], rout
 
 router.get('/:routineId', [auth, hasPermission('routine.view')], routineController.viewRoutine);
 
+router.put('/:routineId/activate-deactivate', [auth, hasPermission('routine.update')], routineController.activateOrDeactivate)
+
 router.delete('/:routineId', [auth, hasPermission('routine.delete')], routineController.deleteRoutine);
 
 router.put('/:routineId', [auth, hasPermission('routine.update')], routineController.update);

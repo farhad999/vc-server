@@ -12,7 +12,7 @@ const createRoutine = async (req, res) => {
         name: Joi.string().default(monthYear),
         status: Joi.string().default('final'),
         startTime: Joi.string().required(),
-        isActive: Joi.bool(),
+        isActive: Joi.bool().default(false),
         periodLength: Joi.string().required(),
     });
 
@@ -20,13 +20,13 @@ const createRoutine = async (req, res) => {
 
     if (!error) {
 
-        let activeRoutine = await db('routines')
-            .where({isActive: value.isActive})
-            .first();
+        /* let activeRoutine = await db('routines')
+             .where({isActive: value.isActive})
+             .first();
 
-        if(activeRoutine){
-            return res.json({status: 'failed', message: 'Only one can be active at a time'});
-        }
+         if(activeRoutine){
+             return res.json({status: 'failed', message: 'Only one can be active at a time'});
+         }*/
 
         try {
             await db('routines')
@@ -58,16 +58,49 @@ const getRoutines = async (req, res) => {
     return res.json(routines);
 }
 
+const activateOrDeactivate = async (req, res) => {
+    let {routineId} = req.params;
+
+    let activeRoutine = await db('routines')
+        .where({isActive: true})
+        .first();
+
+    let routine = await  db('routines')
+        .where('id', '=', routineId)
+        .first();
+
+    if(routine.status !== 'final'){
+        return res.json({status: 'failed', message: 'Make Routine Final'})
+    }
+
+    //first deactivate the active routine
+    if(activeRoutine) {
+        await db('routines').update({isActive: false}).where('id', activeRoutine.id);
+    }
+  //  console.log('routineId', typeof routineId, 'acitve', activeRoutine.id);
+
+    if(!activeRoutine || routine.id !== activeRoutine?.id){
+
+        await db('routines').update({isActive: true}).where('id', routineId);
+        return res.json({status: 'success', 'message': 'Activated Successfully'});
+    }
+
+    return res.json({status: 'success', message: 'Deactivate Successfully'});
+}
+
 const update = async (req, res) => {
 
     let {routineId} = req.params;
 
     const schema = Joi.object({
         name: Joi.string().required(),
-        status: Joi.string().required()
+        status: Joi.string().required(),
+        startTime: Joi.string().required(),
     });
 
     let {error, value} = schema.validate(req.body);
+
+    //status can not be update for active routine
 
     // return  res.json({er: error});
 
@@ -426,5 +459,6 @@ module.exports = {
     deleteRoutine,
     addClass,
     viewRoutine,
-    updateClass
+    updateClass,
+    activateOrDeactivate
 }

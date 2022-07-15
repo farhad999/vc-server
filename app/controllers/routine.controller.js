@@ -271,11 +271,15 @@ const addClass = async (req, res) => {
             await trx('classes')
                 .insert({id: classId, routineId, teacherId, courseId});
 
-            let studentWithClass = students.map((item => ({studentId: item.id, classId: classId})));
+            let studentWithClass = students.map((item => ({userId: item.id, classId: classId})));
 
-            await trx('class_students').insert(studentWithClass);
+            await trx('class_participants').insert(studentWithClass);
 
             let timesWithClass = times.map((item => ({...item, classId: classId})));
+
+            //add teacher also
+
+            await trx('class_participants').insert({userId: teacherId, classId: classId});
 
             await trx('class_times').insert(timesWithClass);
 

@@ -3,14 +3,14 @@
  * @returns { Promise<void> }
  */
 exports.up = function(knex) {
-  return knex.schema.createTable('class_students', (table) => {
+  return knex.schema.createTable('class_participants', (table) => {
     table.increments();
     table.string('classId');
-    table.integer('studentId').unsigned();
+    table.integer('userId').unsigned();
     table.timestamps({defaultToNow: true, useCamelCase: true})
 
     table.foreign('classId').references('id').inTable('classes');
-    table.foreign('studentId').references('id').inTable('users');
+    table.foreign('userId').references('id').inTable('users');
 
   })
 };
@@ -20,5 +20,5 @@ exports.up = function(knex) {
  * @returns { Promise<void> }
  */
 exports.down = function(knex) {
-  
+  return knex.schema.dropTable('class_participants');
 };

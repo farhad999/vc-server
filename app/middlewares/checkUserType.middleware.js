@@ -5,7 +5,7 @@ const checkUserType =  (userType) => {
 
         if (userType.some(item => item === user.userType)) return next();
 
-        return res.json({status: 'failed', error: 'You have not enough permission'});
+        return res.status(401).json({message: 'Has not enough permission'})
 
     }
 }

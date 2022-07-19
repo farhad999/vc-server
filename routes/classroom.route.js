@@ -8,7 +8,13 @@ const checkUserType = require('../app/middlewares/checkUserType.middleware')
 
 const hasAccessInClass = require('../app/middlewares/hasAccessInClass.middleware');
 
+router.post('/:classId/posts', [auth, checkUserType(['teacher']), hasAccessInClass], classroomController.createPost);
+
+router.get('/:classId/posts', [auth, hasAccessInClass], classroomController.getPosts);
+
 router.get('/:classId', [auth, checkUserType(['student', 'teacher']), hasAccessInClass], classroomController.index);
+
+
 
 router.get('/', [auth, checkUserType(['student', 'teacher'])], classroomController.classes);
 

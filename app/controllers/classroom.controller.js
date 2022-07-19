@@ -1,4 +1,5 @@
 const db = require("../../config/database");
+const Joi = require("joi");
 
 
 const index = async (req, res) => {
@@ -59,7 +60,51 @@ const classes = async (req, res) => {
 
 }
 
+
+const createPost = async (req, res) => {
+
+    let {classId} = req.params;
+
+    let user = req.user;
+
+    const schema = Joi.object({
+        body: Joi.string().required()
+    });
+
+    const {value, error} = schema.validate(req.body);
+
+    if (!error) {
+        await db('posts')
+            .insert({...value, userId: user.id, classId: classId})
+    }
+
+    return res.json({status: 'success', 'message': 'Post Successful'});
+
+}
+
+const getPosts = async (req, res) => {
+
+    let {classId} = req.params;
+
+    let {page} = req.query;
+
+    if (!page) {
+        page = 1;
+    }
+
+    const posts = await db('posts')
+        .select('posts.*', 'users.firstName', 'users.lastName')
+        .join('users', 'users.id', '=', 'posts.userId')
+        .where('classId', '=', classId)
+        .orderBy('posts.createdAt', 'desc')
+        .paginate({perPage: 10, currentPage: page, isLengthAware: true,});
+
+    return res.json(posts);
+}
+
 module.exports = {
     index,
-    classes
+    classes,
+    createPost,
+    getPosts
 }

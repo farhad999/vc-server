@@ -2,3 +2,4 @@
 /.idea
 /logs
 /routes/faker.route.js
+/uploads

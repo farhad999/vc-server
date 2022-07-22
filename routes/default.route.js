@@ -11,5 +11,9 @@ router.get('/user', auth, authController.getUser);
 
 router.post("/logout", auth, authController.logout);
 
+//for download
+router.get("/down", (req, res) => {
+    res.send("hello");
+});
 
 module.exports = router;

@@ -21,6 +21,13 @@ const dir = path.join(__dirname, '../uploads');
 //uploads file will be accessible as files/filename.ext
 app.use('/files', express.static(dir));
 
+app.get('/down/:file', (req, res)=> {
+
+    let {file} = req.params;
+
+    return res.download(dir+"/"+file);
+})
+
 // v1 api routes
 app.use('/api/v1', routes);
 

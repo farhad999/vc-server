@@ -77,7 +77,9 @@ const getUserPermissions = async (id) => {
         .join('users', 'users.id', '=', 'user_permissions.userId')
         .where({'users.id': id});
 
-    return [role, [...permissions, ...p]];
+    let combinedPerms = [...permissions, ...p].map(item=>item.name);
+
+    return [role && role.name, combinedPerms];
 }
 
 module.exports = {

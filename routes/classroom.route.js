@@ -24,6 +24,14 @@ const storage = multer.diskStorage({
 
 const upload = multer({storage: storage});
 
+router.post('/:classId/att', [auth, hasAccessInClass], classroomController.postAttendance);
+
+router.get('/:classId/att', [auth, hasAccessInClass], classroomController.getAttendances);
+
+//participants
+
+router.get('/:classId/participants', [auth, hasAccessInClass], classroomController.getParticipants)
+
 router.post('/:classId/posts', [auth, checkUserType(['teacher']), hasAccessInClass, upload.array('files')], classroomController.createPost)
 
 router.get('/:classId/posts', auth, checkUserType(['teacher', 'student']), hasAccessInClass, classroomController.getPosts);

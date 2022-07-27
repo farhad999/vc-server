@@ -144,9 +144,104 @@ const getPosts = async (req, res) => {
     return res.json(posts);
 }
 
+//Attendances
+
+const postAttendance = async (req, res) => {
+
+    let {classId} = req.params;
+
+    let {user} = req;
+
+    if (!user.isMainTeacher) {
+        return res.json({status: 'failed', message: 'Have not enough permission'});
+    }
+
+    console.log('user', user);
+
+    let prevAtt = await db('class_attendances')
+        .where('date', '=', date)
+        .where('classId', '=', classId)
+        .first();
+
+    if (prevAtt) {
+        return res.json({status: 'failed', message: 'Attendance Already Added for this date'});
+    }
+
+    const schema = Joi.object({
+        date: Joi.string().required(),
+        students: Joi.array().items({
+            userId: Joi.required(),
+            isAttend: Joi.required(),
+        })
+    });
+
+    let {value, error} = schema.validate(req.body);
+
+    if (!error) {
+
+        let {students, date} = value;
+
+        let data = students.map(student => {
+            student.classId = classId;
+            student.date = date;
+            return student;
+        })
+
+        try {
+            await db('class_attendances').insert(data);
+            return res.json({status: 'success', message: 'Attendance Added successfully'});
+        } catch (er) {
+            return res.json({status: 'failed', message: er});
+        }
+
+    } else {
+        return res.json({status: 'failed', message: error})
+    }
+
+
+}
+
+const getAttendances = async (req, res) => {
+
+    let attendances = await db('class_attendances as ca')
+        .select('ca.id', 'users.id as userId', 'sd.studentId', 'users.firstName', 'users.lastName',
+            'ca.isAttend', 'ca.date')
+        .join('users', 'users.id', '=', 'ca.userId')
+        .join('student_details as sd', 'sd.userId', '=', 'users.id')
+        .orderBy('date');
+
+    return res.json(attendances);
+
+}
+
+const getParticipants = async (req, res) => {
+
+    let {classId} = req.params;
+    let {type} = req.query;
+
+    let dbQuery = db('class_participants as cp')
+        .select('users.id', 'users.firstName', 'users.lastName',
+            'sd.studentId')
+        .join('users', 'users.id', '=', 'cp.userId')
+        .join('student_details as sd', 'sd.userId', '=', 'users.id')
+        .where('cp.classId', '=', classId);
+
+    if (type) {
+        dbQuery.where('users.userType', '=', type);
+    }
+
+    let participants = await dbQuery;
+
+    return res.json(participants);
+
+}
+
 module.exports = {
     index,
     classes,
     createPost,
-    getPosts
+    getPosts,
+    postAttendance,
+    getParticipants,
+    getAttendances,
 }

@@ -156,8 +156,6 @@ const postAttendance = async (req, res) => {
         return res.json({status: 'failed', message: 'Have not enough permission'});
     }
 
-    console.log('user', user);
-
     let prevAtt = await db('class_attendances')
         .where('date', '=', date)
         .where('classId', '=', classId)
@@ -198,6 +196,36 @@ const postAttendance = async (req, res) => {
         return res.json({status: 'failed', message: error})
     }
 
+
+}
+
+const updateAttendance = async (req, res) => {
+
+    let {user} = req;
+
+    let {attId, classId} = req.params;
+
+    const schema = Joi.object({
+        isAttend: Joi.bool().required()
+    })
+
+    let {value,error} = schema.validate(req.body);
+
+    if(!error) {
+
+        const {isAttend} = value;
+
+        try {
+            await db('class_attendances as ca')
+                .update({isAttend})
+                .where({'ca.id': attId})
+
+            return res.json({status: 'success', message: 'Update Successful'})
+
+        } catch (er) {
+
+        }
+    }
 
 }
 
@@ -244,4 +272,5 @@ module.exports = {
     postAttendance,
     getParticipants,
     getAttendances,
+    updateAttendance
 }

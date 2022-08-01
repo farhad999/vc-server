@@ -38,6 +38,14 @@ router.post('/:classId/posts', [auth, checkUserType(['teacher']), hasAccessInCla
 
 router.get('/:classId/posts', auth, checkUserType(['teacher', 'student']), hasAccessInClass, classroomController.getPosts);
 
+//assignments
+
+router.get('/:classId/assignments/:a', auth, hasAccessInClass, classroomController.viewAssignment);
+
+router.post('/:classId/assignments', auth, hasAccessInClass, classroomController.createAssignment);
+
+router.get('/:classId/assignments', auth, checkUserType(['teacher', 'student']), hasAccessInClass, classroomController.getAssignments);
+
 router.get('/:classId', [auth, checkUserType(['student', 'teacher']), hasAccessInClass], classroomController.index);
 
 

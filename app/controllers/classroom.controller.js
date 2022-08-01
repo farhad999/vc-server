@@ -1,6 +1,7 @@
 const db = require("../../config/database");
 const Joi = require("joi");
 const multer = require('multer');
+const {faker} = require("@faker-js/faker");
 
 const index = async (req, res) => {
 
@@ -209,9 +210,9 @@ const updateAttendance = async (req, res) => {
         isAttend: Joi.bool().required()
     })
 
-    let {value,error} = schema.validate(req.body);
+    let {value, error} = schema.validate(req.body);
 
-    if(!error) {
+    if (!error) {
 
         const {isAttend} = value;
 
@@ -264,6 +265,80 @@ const getParticipants = async (req, res) => {
 
 }
 
+//assignments
+
+const createAssignment = async (req, res) => {
+
+    let {classId} = req.params;
+
+    let user = req.user;
+
+    const schema = Joi.object({
+        title: Joi.string().required(),
+        description: Joi.string(),
+        points: Joi.number().allow(null).default(null),
+        due: Joi.string().allow(null)
+    });
+
+    const {value, error} = schema.validate(req.body);
+
+    console.log('user', user);
+
+    if (!user.isMainTeacher) {
+        return res.json({status: 'failed', message: 'You have not permission'});
+    }
+
+    if (!error) {
+
+        try {
+            await db('assignments')
+                .insert({
+                    ...value, classId: classId,
+                    id: faker.random.alphaNumeric(10),
+                    userId: user.id
+                })
+            return res.json({status: 'success', message: 'Assignment Added'});
+        } catch (er) {
+            return res.json({status: 'failed', message: er})
+        }
+
+    } else {
+        return res.json({status: 'failed', message: error})
+    }
+
+}
+
+const getAssignments = async (req, res) => {
+
+    let {classId} = req.params;
+
+    const assignments = await db('assignments')
+        .where({classId: classId});
+
+    return res.json(assignments);
+
+}
+
+const viewAssignment = async (req, res) => {
+
+    let {a} = req.params;
+
+    let assignment = await db('assignments as a')
+        .select('a.id','a.title', 'a.description', 'a.points', 'a.due',
+            'users.firstName', 'users.lastName'
+            )
+        .join('users', 'users.id', '=', 'a.userId')
+        .where('a.id', '=', a)
+        .first();
+
+    if (!assignment) {
+        return res.json({status: 'failed', message: 'Assignment Not Found'});
+    }
+
+    return res.json(assignment);
+
+}
+
 module.exports = {
     index,
     classes,
@@ -272,5 +347,8 @@ module.exports = {
     postAttendance,
     getParticipants,
     getAttendances,
-    updateAttendance
+    updateAttendance,
+    createAssignment,
+    getAssignments,
+    viewAssignment
 }

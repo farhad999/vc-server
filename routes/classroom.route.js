@@ -42,9 +42,11 @@ router.get('/:classId/posts', auth, checkUserType(['teacher', 'student']), hasAc
 
 router.get('/:classId/assignments/:a', auth, hasAccessInClass, classroomController.viewAssignment);
 
-router.post('/:classId/assignments', auth, hasAccessInClass, classroomController.createAssignment);
+router.delete('/:classId/assignments/:a', auth, hasAccessInClass, classroomController.deleteAssignment);
 
-router.get('/:classId/assignments', auth, checkUserType(['teacher', 'student']), hasAccessInClass, classroomController.getAssignments);
+router.post('/:classId/assignments', auth, hasAccessInClass, classroomController.createOrUpdateAssignment);
+
+router.get('/:classId/assignments', auth, hasAccessInClass, classroomController.getAssignments);
 
 router.get('/:classId', [auth, checkUserType(['student', 'teacher']), hasAccessInClass], classroomController.index);
 

@@ -9,7 +9,7 @@ exports.up = function(knex) {
       table.string('path');
       //table in which attached
       table.string('attachable');
-      table.integer('attachableId');
+      table.string('attachableId');
       table.integer('ownerId').unsigned();
       table.timestamps({useCamelCase: true, defaultToNow: true});
 

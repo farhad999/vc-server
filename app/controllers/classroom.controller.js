@@ -2,6 +2,7 @@ const db = require("../../config/database");
 const Joi = require("joi");
 const multer = require('multer');
 const {faker} = require("@faker-js/faker");
+const fs = require("fs");
 
 const index = async (req, res) => {
 
@@ -267,22 +268,28 @@ const getParticipants = async (req, res) => {
 
 //assignments
 
-const createAssignment = async (req, res) => {
+const createOrUpdateAssignment = async (req, res) => {
 
     let {classId} = req.params;
 
     let user = req.user;
 
     const schema = Joi.object({
+        id: Joi.string().optional(),
         title: Joi.string().required(),
         description: Joi.string(),
         points: Joi.number().allow(null).default(null),
-        due: Joi.string().allow(null)
+        due: Joi.string().allow(null),
+        attachments: Joi.array().items({
+            id: Joi.number().optional(),
+            size: Joi.number(),
+            name: Joi.string(),
+            path: Joi.string(),
+        })
     });
 
-    const {value, error} = schema.validate(req.body);
 
-    console.log('user', user);
+    const {value, error} = schema.validate(req.body);
 
     if (!user.isMainTeacher) {
         return res.json({status: 'failed', message: 'You have not permission'});
@@ -290,13 +297,73 @@ const createAssignment = async (req, res) => {
 
     if (!error) {
 
+        const {attachments, id, ...rest} = value;
+
+        const trxProvider = db.transactionProvider();
+
+        const trx = await trxProvider();
+
         try {
-            await db('assignments')
-                .insert({
-                    ...value, classId: classId,
-                    id: faker.random.alphaNumeric(10),
-                    userId: user.id
-                })
+
+            if (id) {
+                await trx('assignments')
+                    .update({
+                        ...rest,
+                    }).where('id', '=', id);
+
+                for (let att of attachments) {
+
+                    if (att.id) {
+
+                        await trx('attachments')
+                            .update({name: att.name, path: att.path})
+                            .where('id', '=', att.id);
+
+
+                    } else {
+
+                        await trx('attachments')
+                            .insert({
+                                name: att.name,
+                                path: att.path,
+                                size: att.size,
+                                attachable: 'assignment',
+                                attachableId: id,
+                                ownerId: user.id
+                            });
+                    }
+
+                }
+
+            } else {
+
+                let id = faker.random.alphaNumeric(10)
+
+                await trx('assignments')
+                    .insert({
+                        ...rest, classId: classId,
+                        id: id,
+                        userId: user.id
+                    })
+
+                for (let att of attachments) {
+
+                    await trx('attachments')
+                        .insert({
+                            name: att.name,
+                            path: att.path,
+                            size: att.size,
+                            attachable: 'assignment',
+                            attachableId: id,
+                            ownerId: user.id
+                        });
+
+                }
+
+            }
+
+            trx.commit();
+
             return res.json({status: 'success', message: 'Assignment Added'});
         } catch (er) {
             return res.json({status: 'failed', message: er})
@@ -324,18 +391,73 @@ const viewAssignment = async (req, res) => {
     let {a} = req.params;
 
     let assignment = await db('assignments as a')
-        .select('a.id','a.title', 'a.description', 'a.points', 'a.due',
+        .select('a.id', 'a.title', 'a.description', 'a.points', 'a.due',
             'users.firstName', 'users.lastName'
-            )
+        )
         .join('users', 'users.id', '=', 'a.userId')
         .where('a.id', '=', a)
         .first();
 
     if (!assignment) {
+        return res.status(404).json({message: 'Assignment Not Found'});
+    }
+
+    let attachments = await db('attachments as a')
+        .where('a.attachableId', '=', assignment.id)
+        .where('a.attachable', '=', 'assignment');
+
+    if (!assignment) {
         return res.json({status: 'failed', message: 'Assignment Not Found'});
     }
 
+    assignment.attachments = attachments;
+
     return res.json(assignment);
+
+}
+
+const deleteAssignment = async (req, res) => {
+    let {a} = req.params;
+
+    const trxProvider = db.transactionProvider();
+
+    const trx = await trxProvider();
+
+    /*et attachments = await db('attachments')
+        .where('attachableId', '=', a)
+        .where('attachable', '=', 'assignments');*/
+
+
+    try {
+        await trx('assignments')
+            .where('id', '=', a)
+            .delete();
+
+        let attachments = await trx('attachments')
+            .where('attachable', '=', 'assignments')
+            .where('attachableId', '=', a);
+
+        for (let att of attachments) {
+
+            try {
+                fs.unlinkSync(att.path);
+
+            } catch (er) {
+                trx.rollback();
+                return res.json({status: 'failed', message: er});
+            }
+            await trx('attachments')
+                .where({id: att.id})
+                .delete();
+
+
+        }
+        trx.commit();
+        return res.json({status: 'success', message: 'Delete Successful'});
+
+    } catch (er) {
+        return res.json({status: 'failed', message: er});
+    }
 
 }
 
@@ -348,7 +470,8 @@ module.exports = {
     getParticipants,
     getAttendances,
     updateAttendance,
-    createAssignment,
+    createOrUpdateAssignment,
     getAssignments,
-    viewAssignment
+    viewAssignment,
+    deleteAssignment
 }

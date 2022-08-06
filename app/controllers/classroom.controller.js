@@ -346,6 +346,22 @@ const createOrUpdateAssignment = async (req, res) => {
                         userId: user.id
                     })
 
+                let students = await trx('class_participants as cp')
+                    .select('users.id')
+                    .join('users', 'users.id', '=', 'cp.userId')
+                    .where('cp.classId', '=', classId)
+                    .where('users.userType', '=', 'student');
+
+                let assignData = students.map(st => ({
+                    assignmentId: id,
+                    assignedTo: st.id,
+                }))
+
+                console.log('ass', assignData);
+
+                await trx('assignment_students')
+                    .insert(assignData);
+
                 for (let att of attachments) {
 
                     await trx('attachments')
@@ -390,13 +406,23 @@ const viewAssignment = async (req, res) => {
 
     let {a} = req.params;
 
-    let assignment = await db('assignments as a')
+    let {user} = req;
+
+    let assignmentQuery = db('assignments as a')
         .select('a.id', 'a.title', 'a.description', 'a.points', 'a.due',
-            'users.firstName', 'users.lastName'
+            'users.firstName', 'users.lastName',
         )
         .join('users', 'users.id', '=', 'a.userId')
-        .where('a.id', '=', a)
-        .first();
+
+        .where('a.id', '=', a);
+
+    if (user.userType === 'student') {
+        assignmentQuery.select('as.status')
+            .join('assignment_students as as', 'as.assignmentId', '=', 'a.id')
+            .where('as.assignedTo', '=', user.id)
+    }
+
+    const assignment = await assignmentQuery.first();
 
     if (!assignment) {
         return res.status(404).json({message: 'Assignment Not Found'});
@@ -406,11 +432,22 @@ const viewAssignment = async (req, res) => {
         .where('a.attachableId', '=', assignment.id)
         .where('a.attachable', '=', 'assignment');
 
+    let studentAttachments = null;
+
+    if (user.userType === 'student') {
+        studentAttachments = await db('attachments as a')
+            .where('a.attachableId', '=', assignment.id)
+            .where('a.attachable', '=', 'student_work')
+            .where('a.ownerId', '=', user.id);
+    }
+
     if (!assignment) {
         return res.json({status: 'failed', message: 'Assignment Not Found'});
     }
 
     assignment.attachments = attachments;
+
+    assignment.studentAttachments = studentAttachments;
 
     return res.json(assignment);
 
@@ -461,6 +498,48 @@ const deleteAssignment = async (req, res) => {
 
 }
 
+const submitClassWork = async (req, res) => {
+    const {classId, a} = req.params;
+
+    let {user} = req;
+
+    if (user.userType !== 'student') {
+        return res.json({status: 'failed', message: 'Only Students can submit classswork'});
+    }
+
+    const {files} = req.body;
+
+    const attachableFiles = files.map(file => {
+        file.attachableId = a;
+        file.attachable = 'student_work';
+        file.ownerId = user.id;
+        return file;
+    })
+
+    const trxProvider = db.transactionProvider();
+
+    const trx = await trxProvider();
+
+
+    try {
+        await trx('assignment_students')
+            .update({status: 'submitted'})
+            .where('assignedTo', '=', user.id);
+
+        await trx('attachments')
+            .insert(attachableFiles);
+
+        trx.commit();
+
+        return res.json({status: 'success', message: 'Submitted'})
+
+    } catch (er) {
+        trx.rollback();
+        return res.json({status: 'failed', message: er});
+    }
+
+}
+
 module.exports = {
     index,
     classes,
@@ -473,5 +552,6 @@ module.exports = {
     createOrUpdateAssignment,
     getAssignments,
     viewAssignment,
-    deleteAssignment
+    deleteAssignment,
+    submitClassWork
 }

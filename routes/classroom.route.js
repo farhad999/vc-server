@@ -40,6 +40,8 @@ router.get('/:classId/posts', auth, checkUserType(['teacher', 'student']), hasAc
 
 //assignments
 
+router.post('/:classId/assignments/:a/submit_classwork', auth, hasAccessInClass, classroomController.submitClassWork);
+
 router.get('/:classId/assignments/:a', auth, hasAccessInClass, classroomController.viewAssignment);
 
 router.delete('/:classId/assignments/:a', auth, hasAccessInClass, classroomController.deleteAssignment);

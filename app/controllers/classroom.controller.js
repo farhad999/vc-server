@@ -8,6 +8,8 @@ const index = async (req, res) => {
 
     let {classId} = req.params;
 
+    let {user} = req;
+
     let cls = await db('classes')
         .select('classes.id', 'courses.name', 'courses.courseCode')
         .join('courses', 'courses.id', '=', 'classes.courseId')
@@ -18,7 +20,7 @@ const index = async (req, res) => {
         return res.json({status: 'failed'});
     }
 
-    return res.json(cls);
+    return res.json({cls:cls, user: {isMainTeacher: user.isMainTeacher, userType: user.userType}});
 }
 
 const classes = async (req, res) => {

@@ -540,6 +540,23 @@ const submitClassWork = async (req, res) => {
 
 }
 
+const getClassWorkSubmissions = async (req, res) => {
+
+    const {classId, a} = req.params;
+
+    try {
+        let submissions = await db('assignment_students as as')
+            .select('users.id', 'sd.studentId', 'users.firstName', 'users.lastName', 'as.status')
+            .join('users', 'users.id', '=', 'as.assignedTo')
+            .join('student_details as sd', 'sd.userId', '=', 'users.id')
+            .where('as.assignmentId', '=', a);
+
+        return res.json(submissions);
+    } catch (er) {
+        return res.send({status: 'failed', message: er})
+    }
+}
+
 module.exports = {
     index,
     classes,
@@ -553,5 +570,6 @@ module.exports = {
     getAssignments,
     viewAssignment,
     deleteAssignment,
-    submitClassWork
+    submitClassWork,
+    getClassWorkSubmissions
 }

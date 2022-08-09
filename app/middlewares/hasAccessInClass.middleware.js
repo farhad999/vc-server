@@ -6,6 +6,14 @@ const hasAccessInClass = async (req, res, next) => {
 
     let {classId} = req.params;
 
+    let cls = await db('classes')
+        .where('id', '=', classId)
+        .first();
+
+    if(!cls){
+        return res.status(404).send("Class Not found!");
+    }
+
     const participant = await db('classes')
         .join('class_participants as cp', 'cp.classId', '=', 'classes.id')
         .where({'classes.id': classId, 'cp.userId': user.id})

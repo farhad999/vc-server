@@ -4,6 +4,7 @@ const Member = require('../../models/Member')
 const Joi = require("joi");
 const {faker} = require("@faker-js/faker");
 const postService = require('../../services/post.service')
+const User = require('../../models/User')
 
 const getGroups = async (req, res) => {
 
@@ -110,7 +111,7 @@ const joinRequest = async (req, res) => {
 
     const group = await Group.query().findById(id);
 
-    if(!group){
+    if (!group) {
         return res.status(404).send('Group Not Found');
     }
 
@@ -118,16 +119,16 @@ const joinRequest = async (req, res) => {
         .where('groupId', '=', id)
         .where('userId', '=', user.id).first();
 
-    if(member){
+    if (member) {
         return res.json({status: 'failed', message: 'You are already a member'});
     }
 
-    if(code){
-        if(group.invitationCode === code){
+    if (code) {
+        if (group.invitationCode === code) {
             await db('members')
                 .insert({userId: user.id, groupId: group.id});
             return res.json({status: 'success', message: 'Joined Successful', accessInfo: {isMember: true}});
-        }else{
+        } else {
             return res.json({status: 'failed', 'message': 'Invite Code is not valid, for this group.'})
         }
     }
@@ -168,8 +169,20 @@ const getPosts = async (req, res) => {
     await postService.getPosts(req, res, 'group', 'id');
 }
 
-const createPost = async(req, res) => {
+const createPost = async (req, res) => {
     await postService.createPost(req, res, 'group', 'id');
+}
+
+const getMembers = async (req, res) => {
+
+    let {id} = req.params;
+
+    const members = await User.query()
+        .join('members', 'users.id', '=', 'members.userId')
+        .where("members.groupId", '=', id);
+
+    return res.json(members);
+
 }
 
 module.exports = {
@@ -178,5 +191,6 @@ module.exports = {
     viewGroup,
     joinRequest,
     getPosts,
-    createPost
+    createPost,
+    getMembers
 }

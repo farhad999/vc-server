@@ -19,6 +19,8 @@ const storage = multer.diskStorage({
 
 const upload = multer({storage: storage});
 
+router.get('/:id/members', auth, hasGroupAccess, groupController.getMembers);
+
 router.post('/:id/posts', auth, upload.array('files'), groupController.createPost);
 
 router.get('/:id/posts', auth, groupController.getPosts);

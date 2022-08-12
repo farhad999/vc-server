@@ -13,6 +13,10 @@ class User extends Model {
         return 'id';
     }
 
+    static get virtualAttributes() {
+        return ['fullName'];
+    }
+
     fullName() {
         return this.firstName + ' ' + this.lastName;
     }

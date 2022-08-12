@@ -16,6 +16,7 @@ class Member extends Model {
     static get relationMappings(){
 
         const Group = require('./Group');
+        const User = require('./User');
 
        return {
            group: {
@@ -24,6 +25,14 @@ class Member extends Model {
                join: {
                    from: 'groups.id',
                    to: 'members.groupId',
+               }
+           },
+           user: {
+               relation: Model.BelongsToOneRelation,
+               modelClass: User,
+               join: {
+                   from: 'users.id',
+                   to: 'members.userId',
                }
            }
        }

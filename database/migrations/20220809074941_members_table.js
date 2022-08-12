@@ -3,6 +3,7 @@ exports.up = function (knex) {
         table.increments();
         table.integer('userId').unsigned();
         table.string('groupId');
+        table.timestamps({useCamelCase: true, defaultToNow: true});
 
         table.foreign('userId').references('id').inTable('users')
             .onDelete('cascade');

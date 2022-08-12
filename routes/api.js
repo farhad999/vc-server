@@ -8,6 +8,7 @@ const routineRoute = require('./routine.route');
 const classroomRoute = require('./classroom.route')
 const semesterRoute = require('./semester.route')
 const fileRoute = require('./file.route')
+const groupRoute = require('./group.route')
 
 const routes = [
     {
@@ -37,6 +38,10 @@ const routes = [
     {
       path: '/f',
       route: fileRoute,
+    },
+    {
+      path: '/g',
+      route: groupRoute,
     },
     {
         path: '/',

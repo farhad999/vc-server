@@ -2,6 +2,8 @@ const Joi = require("joi");
 const db = require("../../config/database");
 const createPost = async (req, res, type, typeKeyId) => {
 
+    console.log('body'+type, req.body);
+
     let typeId = req.params[typeKeyId];
 
     let user = req.user;

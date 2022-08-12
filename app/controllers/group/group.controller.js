@@ -3,6 +3,7 @@ const Group = require('../../models/Group')
 const Member = require('../../models/Member')
 const Joi = require("joi");
 const {faker} = require("@faker-js/faker");
+const postService = require('../../services/post.service')
 
 const getGroups = async (req, res) => {
 
@@ -163,9 +164,19 @@ const joinRequest = async (req, res) => {
     }
 }
 
+const getPosts = async (req, res) => {
+    await postService.getPosts(req, res, 'group', 'id');
+}
+
+const createPost = async(req, res) => {
+    await postService.createPost(req, res, 'group', 'id');
+}
+
 module.exports = {
     getGroups,
     createGroup,
     viewGroup,
-    joinRequest
+    joinRequest,
+    getPosts,
+    createPost
 }

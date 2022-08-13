@@ -13,6 +13,20 @@ class Request extends Model {
         return 'id';
     }
 
+    static get relationMappings() {
+        const User = require('./User');
+        return{
+            user: {
+                relation: Model.BelongsToOneRelation,
+                modelClass: User,
+                join: {
+                    from: 'users.id',
+                    to: 'requests.userId',
+                }
+            }
+        }
+    }
+
 }
 
 module.exports = Request;

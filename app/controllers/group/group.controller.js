@@ -5,6 +5,8 @@ const Joi = require("joi");
 const {faker} = require("@faker-js/faker");
 const postService = require('../../services/post.service')
 const User = require('../../models/User')
+const logger = require('../../../config/logger')
+const Request = require('../../models/Request')
 
 const getGroups = async (req, res) => {
 
@@ -155,7 +157,7 @@ const joinRequest = async (req, res) => {
 
         try {
             await db('requests')
-                .insert({typeId: id, userId: user.id});
+                .insert({typeId: id, userId: user.id, type: 'group'});
 
             return res.json({status: 'success', message: 'Request Sent', accessInfo: {isRequestSent: true}})
         } catch (er) {
@@ -185,6 +187,96 @@ const getMembers = async (req, res) => {
 
 }
 
+const requests = async (req, res) => {
+
+    const {id} = req.params;
+
+    const requests = await User.query()
+        .select('users.id', 'users.firstName', 'users.lastName', 'requests.id as requestId')
+        .join('requests', 'requests.userId', '=', 'users.id')
+        .where('requests.type', '=', 'group')
+        .where('requests.typeId', '=', id);
+
+    // const requests = await Request.query().withGraphFetched('user');
+
+    return res.json(requests);
+}
+
+const acceptRequest = async (req, res) => {
+    let {id, requestId} = req.params;
+
+    let {userId} = req.body;
+
+    let request = await db('requests')
+        .where('id', '=', requestId)
+        .first();
+
+    let user = req.user;
+
+    if (!user.isAdmin) {
+        logger.info('User does not have permission');
+        return res.status(403).send({message: 'You have not permission to perform this operation'})
+    }
+
+    if (!request) {
+        logger.info('following request not found: request Id' + requestId)
+        return res.status(404).send({message: 'Request not found'});
+    }
+
+    const trxProvider = db.transactionProvider();
+
+    const trx = await trxProvider();
+
+    try {
+
+        await trx('members')
+            .insert({groupId: id, userId: userId});
+
+        await trx('requests')
+            .where('id', '=', requestId)
+            .delete();
+
+        trx.commit();
+
+        return res.json({status: 'success', message: 'Request Accepted'});
+    } catch (er) {
+        //logger.emerg({message: er.message, line: er.stackTrace})
+        console.log(er);
+    }
+
+}
+
+const removeRequest = async (req, res) => {
+
+    let {id, requestId} = req.params;
+
+    let request = await db('requests')
+        .where('id', '=', requestId)
+        .first();
+
+    let user = req.user;
+
+    if (!user.isAdmin) {
+        logger.info('User does not have permission');
+        return res.status(403).send({message: 'You have not permission to perform this operation'})
+    }
+
+    if (!request) {
+        logger.info('following request not found: request Id' + requestId)
+        return res.status(404).send({message: 'Request not found'});
+    }
+
+    try {
+        await db('requests')
+            .where('id', '=', requestId)
+            .delete();
+
+        return res.json({status: 'success', message: 'Request deleted'});
+    } catch (er) {
+        return res.status(500).json({message: er.message});
+    }
+
+}
 
 module.exports = {
     getGroups,
@@ -193,5 +285,8 @@ module.exports = {
     joinRequest,
     getPosts,
     createPost,
-    getMembers
+    getMembers,
+    requests,
+    acceptRequest,
+    removeRequest
 }

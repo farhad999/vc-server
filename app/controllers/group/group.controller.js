@@ -86,7 +86,7 @@ const viewGroup = async (req, res) => {
     } else {
         const hasRequest = await db('requests')
             .where('userId', '=', user.id)
-            .where('groupId', '=', id)
+            .where('typeId', '=', id)
             .where('type', '=', 'group')
             .first();
 
@@ -126,7 +126,7 @@ const joinRequest = async (req, res) => {
     if (code) {
         if (group.invitationCode === code) {
             await db('members')
-                .insert({userId: user.id, groupId: group.id});
+                .insert({userId: user.id, typeId: group.id, type: 'group'});
             return res.json({status: 'success', message: 'Joined Successful', accessInfo: {isMember: true}});
         } else {
             return res.json({status: 'failed', 'message': 'Invite Code is not valid, for this group.'})
@@ -135,7 +135,7 @@ const joinRequest = async (req, res) => {
 
 
     const isRequestSent = await db('requests')
-        .where({groupId: id, userId: user.id})
+        .where({typeId: id, userId: user.id})
         .where('type', '=', 'group')
         .first();
 
@@ -143,7 +143,7 @@ const joinRequest = async (req, res) => {
 
         try {
             await db('requests')
-                .where({groupId: id, userId: user.id})
+                .where({typeId: id, userId: user.id})
                 .where('type', '=', 'group')
                 .delete();
             return res.json({status: 'success', message: 'Request Cancel', accessInfo: {isRequestSent: false}});
@@ -155,7 +155,7 @@ const joinRequest = async (req, res) => {
 
         try {
             await db('requests')
-                .insert({groupId: id, userId: user.id});
+                .insert({typeId: id, userId: user.id});
 
             return res.json({status: 'success', message: 'Request Sent', accessInfo: {isRequestSent: true}})
         } catch (er) {
@@ -184,6 +184,7 @@ const getMembers = async (req, res) => {
     return res.json(members);
 
 }
+
 
 module.exports = {
     getGroups,

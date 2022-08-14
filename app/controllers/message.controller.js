@@ -55,9 +55,7 @@ const viewConversation = async (req, res) => {
 
     let {page} = req.query;
 
-    if(!page){
-        page = 1;
-    }
+    page = parseInt(page);
 
     const conversation = await db('conversations')
         .where('id', '=', id)
@@ -67,9 +65,10 @@ const viewConversation = async (req, res) => {
         .select('messages.*', 'users.firstName', 'users.lastName', 'users.id as userId')
         .join('users', 'users.id', '=', 'messages.senderId')
         .where('conversationId', '=', id)
+        .orderBy('createdAt', 'desc')
         .paginate({perPage: 10, currentPage: page, isLengthAware: true});
 
-    return res.json({conversation, messages})
+    return res.json({conversation,messageData:  messages})
 }
 
 module.exports = {

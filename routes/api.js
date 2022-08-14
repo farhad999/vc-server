@@ -9,6 +9,7 @@ const classroomRoute = require('./classroom.route')
 const semesterRoute = require('./semester.route')
 const fileRoute = require('./file.route')
 const groupRoute = require('./group.route')
+const messageRoute = require('./message.route')
 
 const routes = [
     {
@@ -16,8 +17,8 @@ const routes = [
         route: routineRoute
     },
     {
-      path: '/semesters',
-      route: semesterRoute,
+        path: '/semesters',
+        route: semesterRoute,
     },
     {
         path: '/c',
@@ -36,12 +37,16 @@ const routes = [
         route: fakerRoute,
     },
     {
-      path: '/f',
-      route: fileRoute,
+        path: '/f',
+        route: fileRoute,
     },
     {
-      path: '/g',
-      route: groupRoute,
+        path: '/g',
+        route: groupRoute,
+    },
+    {
+        path: '/m',
+        route: messageRoute,
     },
     {
         path: '/',

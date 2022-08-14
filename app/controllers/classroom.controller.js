@@ -181,9 +181,9 @@ const getParticipants = async (req, res) => {
 
     let dbQuery = db('class_participants as cp')
         .select('users.id', 'users.firstName', 'users.lastName',
-            'sd.studentId')
+            'sd.studentId', 'users.userType')
         .join('users', 'users.id', '=', 'cp.userId')
-        .join('student_details as sd', 'sd.userId', '=', 'users.id')
+        .leftJoin('student_details as sd', 'sd.userId', '=', 'users.id')
         .where('cp.classId', '=', classId);
 
     if (type) {

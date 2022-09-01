@@ -9,6 +9,7 @@ const classroomRoute = require('./classroom.route')
 const semesterRoute = require('./semester.route')
 const fileRoute = require('./file.route')
 const groupRoute = require('./group.route')
+const questionRoute = require('./question.route')
 
 const routes = [
     {
@@ -42,6 +43,10 @@ const routes = [
     {
       path: '/g',
       route: groupRoute,
+    },
+    {
+      path: '/q',
+      route: questionRoute,
     },
     {
         path: '/',

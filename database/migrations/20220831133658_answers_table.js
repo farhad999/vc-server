@@ -4,6 +4,7 @@ exports.up = function(knex) {
       table.text('body');
       table.string('questionId');
       table.integer('userId').unsigned();
+      table.timestamps({useCamelCase: true, defaultToNow: true});
 
       table.foreign('questionId').references('id')
           .inTable('questions').onDelete('cascade');

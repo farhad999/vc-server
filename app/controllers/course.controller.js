@@ -3,7 +3,9 @@ const Joi = require("joi");
 
 const index = async (req, res) => {
 
-    let {page, q, semesterId} = req.query;
+    //sn = semester short name
+
+    let {page, q, sn, semesterId} = req.query;
 
 
     if (!page) {
@@ -11,15 +13,20 @@ const index = async (req, res) => {
     }
 
     let dbQuery = db('courses')
-        .select('id', 'name', 'courseCode', 'credit', 'semesterId')
-        .whereNull('deletedAt')
-        .orderBy('id', 'desc');
+        .select('courses.id', 'courses.name', 'courseCode', 'credit', 'semesterId', 'semesters.shortName')
+        .join('semesters', 'semesters.id', '=', 'courses.semesterId')
+        .whereNull('courses.deletedAt')
+        .orderBy('courses.id', 'desc');
 
     //where Like case-sensitive
     //whereILike case-insensitive
     if (q) {
         dbQuery.whereILike('courseCode', `${q}%`)
-            .orWhereILike('name', `%${q}%`)
+            .orWhereILike('courses.name', `%${q}%`)
+    }
+
+    if(sn){
+        dbQuery.where('semesters.shortName', '=', sn);
     }
 
     if(semesterId){

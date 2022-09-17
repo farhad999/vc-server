@@ -11,6 +11,6 @@ router.delete('/:courseId', [auth, hasPermission('course.delete')],  courseContr
 
 router.post('/', [auth, hasPermission('course.create')],  courseController.store);
 
-router.get('/', [auth, hasPermission('course.view')],  courseController.index);
+router.get('/', [auth, hasPermission('course.view', ['teacher'])],  courseController.index);
 
 module.exports = router;

@@ -3,3 +3,6 @@
 /logs
 /routes/faker.route.js
 /uploads
+knexfile.js
+/data
+

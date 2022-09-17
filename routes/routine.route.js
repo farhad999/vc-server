@@ -9,15 +9,15 @@ router.put('/:routineId/classes/:classId', [auth, hasPermission('routine.create'
 
 router.post('/:routineId/classes', [auth, hasPermission('routine.create')], routineController.addClass);
 
+router.get('/:routineId/:courseId', auth, routineController.getClassInfo);
+
 router.get('/:routineId', [auth, hasPermission('routine.view')], routineController.viewRoutine);
 
-router.put('/:routineId/activate-deactivate', [auth, hasPermission('routine.update')], routineController.activateOrDeactivate)
+router.put('/:routineId/activate-deactivate', [auth, hasPermission('routine.update')], routineController.activateOrDeactivate);
 
 router.delete('/:routineId', [auth, hasPermission('routine.delete')], routineController.deleteRoutine);
 
-router.put('/:routineId', [auth, hasPermission('routine.update')], routineController.update);
-
-router.post('/', [auth, hasPermission('routine.create')], routineController.createRoutine);
+router.post('/', [auth, hasPermission('routine.create')], routineController.createOrUpdateRoutine);
 
 router.get('/', [auth, hasPermission('routine.view')], routineController.getRoutines);
 

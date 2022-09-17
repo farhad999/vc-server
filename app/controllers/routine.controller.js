@@ -2,37 +2,48 @@ const Joi = require("joi");
 const db = require("../../config/database");
 const moment = require("../../config/moment");
 const {faker} = require("@faker-js/faker");
-const routineService = require('../services/routine.service')
+const routineService = require('../services/routine.service');
+const logger = require('../../config/logger');
 
-const createRoutine = async (req, res) => {
+const createOrUpdateRoutine = async (req, res) => {
 
     let monthYear = moment().format('MMMM-YYYY');
 
     const schema = Joi.object({
+        id: Joi.number().optional(),
         name: Joi.string().default(monthYear),
-        status: Joi.string().default('final'),
+        status: Joi.string().default('draft'),
         startTime: Joi.string().required(),
         isActive: Joi.bool().default(false),
-        periodLength: Joi.string().required(),
+        periodLength: Joi.number().required(),
+        type: Joi.string().valid('simple', 'priority').default('simple'),
+        offDays: Joi.string().required(),
+        semesters: Joi.string().required(),
+        endTime: Joi.string().required(),
+        breakTime: Joi.string().required(),
     });
 
     let {error, value} = schema.validate(req.body);
 
     if (!error) {
 
-        /* let activeRoutine = await db('routines')
-             .where({isActive: value.isActive})
-             .first();
-
-         if(activeRoutine){
-             return res.json({status: 'failed', message: 'Only one can be active at a time'});
-         }*/
+        let {id, ...rest} = value;
 
         try {
-            await db('routines')
-                .insert(value);
 
-            return res.json({status: 'success', message: 'Routine Created'});
+            if (id) {
+                await db('routines')
+                    .update(value)
+                    .where({id: id});
+
+                return res.json({status: 'success', message: 'Routine Updated'});
+            } else {
+                await db('routines')
+                    .insert(rest);
+                return res.json({status: 'success', message: 'Routine Created'});
+            }
+
+
         } catch (er) {
             return res.json({status: 'failed', error: er});
         }
@@ -65,71 +76,27 @@ const activateOrDeactivate = async (req, res) => {
         .where({isActive: true})
         .first();
 
-    let routine = await  db('routines')
+    let routine = await db('routines')
         .where('id', '=', routineId)
         .first();
 
-    if(routine.status !== 'final'){
+    if (routine.status !== 'final') {
         return res.json({status: 'failed', message: 'Make Routine Final'})
     }
 
     //first deactivate the active routine
-    if(activeRoutine) {
+    if (activeRoutine) {
         await db('routines').update({isActive: false}).where('id', activeRoutine.id);
     }
-  //  console.log('routineId', typeof routineId, 'acitve', activeRoutine.id);
+    //  console.log('routineId', typeof routineId, 'acitve', activeRoutine.id);
 
-    if(!activeRoutine || routine.id !== activeRoutine?.id){
+    if (!activeRoutine || routine.id !== activeRoutine?.id) {
 
         await db('routines').update({isActive: true}).where('id', routineId);
         return res.json({status: 'success', 'message': 'Activated Successfully'});
     }
 
     return res.json({status: 'success', message: 'Deactivate Successfully'});
-}
-
-const update = async (req, res) => {
-
-    let {routineId} = req.params;
-
-    const schema = Joi.object({
-        name: Joi.string().required(),
-        status: Joi.string().required(),
-        startTime: Joi.string().required(),
-    });
-
-    let {error, value} = schema.validate(req.body);
-
-    //status can not be update for active routine
-
-    // return  res.json({er: error});
-
-    if (!error) {
-
-        let routine = await db('routines')
-            .where({id: routineId})
-            .first();
-
-        if (!routine) {
-            return res.json({status: 'failed', error: 'Routine Not Found'});
-        }
-
-        //check time overlap
-
-
-        try {
-            await db('routines')
-                .update(value)
-                .where({id: routineId});
-
-            return res.json({status: 'success', message: 'Routine Updated'});
-        } catch (er) {
-            return res.json({status: 'failed', error: er});
-        }
-    } else {
-        return res.json({status: 'failed', error: error});
-    }
-
 }
 
 const deleteRoutine = async (req, res) => {
@@ -141,21 +108,33 @@ const deleteRoutine = async (req, res) => {
         .first();
 
     if (!routine) {
-        return res.json({status: 'failed', error: 'Routine Not Found'});
+        return res.status(404).json({status: 'Routine Not Found'});
     }
 
     try {
 
         await db('routines')
-            .update({deletedAt: new Date(Date.now())})
-            .where({id: routineId});
+            .where({id: routineId})
+            .delete();
 
         return res.json({status: 'success', message: 'Routine Deleted Successful'});
 
     } catch (er) {
-        return res.json({status: 'failed', error: er});
+        return res.status(500).json({message: er});
     }
 
+}
+
+const addClassTimeOne = async (req, res) => {
+    let {routineId} = req.params;
+
+    let routine = await db('routines')
+        .where({id: routineId})
+        .first();
+
+    if (!routine) {
+        return res.json({status: 'failed', error: 'Routine Not found'});
+    }
 }
 
 const addClass = async (req, res) => {
@@ -171,9 +150,11 @@ const addClass = async (req, res) => {
     }
 
     let schema = Joi.object({
+        id: Joi.string().optional(),
         courseId: Joi.number().required(),
         teacherId: Joi.number().required(),
         times: Joi.array().items({
+            id: Joi.number(),
             day: Joi.string().required(),
             startTime: Joi.string().required(),
             periods: Joi.string().required(),
@@ -184,7 +165,7 @@ const addClass = async (req, res) => {
 
     if (!error) {
 
-        let {courseId, teacherId, times} = value;
+        let {courseId, teacherId, times, id} = value;
 
         //check if course exists
 
@@ -194,16 +175,6 @@ const addClass = async (req, res) => {
 
         if (!course) {
             return res.json({status: 'failed', error: 'Course does not exists'})
-        }
-
-        //check if class already added in this routine
-
-        let classExistsInCurrentRoutine = await db('classes')
-            .where({courseId: courseId, routineId: routineId})
-            .first();
-
-        if (classExistsInCurrentRoutine) {
-            return res.json({status: 'failed', error: "This course already added in current Routine"});
         }
 
         //check is teacherId is exists
@@ -216,6 +187,34 @@ const addClass = async (req, res) => {
             return res.json({status: 'failed', error: "Teacher is not exists"});
         }
 
+        //check if class already added in this routine
+
+        let cls = await db('classes')
+            .where({courseId: courseId, routineId: routineId})
+            .first();
+
+        //class exists then append class times
+
+        let classId = "";
+
+        if (cls) {
+
+            //now check class times
+
+            classId = cls.id;
+
+            let classTimes = await db('class_times')
+                .where('classId', '=', cls.id);
+
+            if (!id && classTimes.length + times.length > course.credit) {
+                return res.json({
+                    status: 'failed',
+                    message: 'Number of class times can not be more than course credits!'
+                })
+            }
+
+        }
+
 
         //Time Overlap check
 
@@ -223,7 +222,7 @@ const addClass = async (req, res) => {
 
         for (let time of times) {
 
-            let classesInTheDay = await db('classes')
+            let classesInTheDayQuery = db('classes')
                 .select('classes.id', 'ct.day as day', 'ct.startTime',
                     'ct.periods')
                 .join('class_times as ct', 'ct.classId', '=', 'classes.id')
@@ -232,6 +231,12 @@ const addClass = async (req, res) => {
                     'ct.day': time.day, 'classes.routineId': routineId,
                     'courses.semesterId': course.semesterId
                 });
+
+            if (time.id) {
+                classesInTheDayQuery.whereNot('ct.id', '=', time.id);
+            }
+
+            const classesInTheDay = await classesInTheDayQuery;
 
             for (let cls of classesInTheDay) {
 
@@ -246,21 +251,12 @@ const addClass = async (req, res) => {
             }
 
             if (timeExists) {
-                return res.json({status: 'failed', error: 'Time overlap! Please Check your time'});
+                return res.json({status: 'failed', message: 'Time overlap! Please Check your time'});
             }
 
         }
 
-
-        let students = await db('courses')
-            //.join('semesters', 'semesters.id', '=', 'courses.semesterId')
-            .select('users.id')
-            .join('student_details as sd', 'sd.semesterId', '=', 'courses.semesterId')
-            .join('users', 'users.id', '=', 'sd.userId')
-            .where({'users.userType': 'student', 'courses.id': courseId});
-
-
-        let classId = faker.random.alphaNumeric(10);
+        //Todo do not add students or teacher as participants until publish
 
         const trxProvider = db.transactionProvider();
 
@@ -268,28 +264,81 @@ const addClass = async (req, res) => {
 
         try {
 
-            await trx('classes')
-                .insert({id: classId, routineId, teacherId, courseId});
+            if (!cls) {
+                classId = faker.random.alphaNumeric(10);
+                await trx('classes')
+                    .insert({id: classId, routineId, teacherId, courseId});
+            }
 
-            let studentWithClass = students.map((item => ({userId: item.id, classId: classId})));
+            if (id) {
+                //update
 
-            await trx('class_participants').insert(studentWithClass);
+                //update time
 
-            let timesWithClass = times.map((item => ({...item, classId: classId})));
+                try {
 
-            //add teacher also
+                    let time = times[0];
 
-            await trx('class_participants').insert({userId: teacherId, classId: classId});
+                    let {id, ...rest} = time;
 
-            await trx('class_times').insert(timesWithClass);
+                    await trx('class_times').update(rest).where('id', '=', id);
 
-            trx.commit();
+                    let cls1 = await db('classes')
+                        .where('id', '=', id)
+                        .first();
+
+                    if (cls1.courseId !== courseId) {
+                        //that mean course code needs to be updated
+                        //but class for that course might not be created
+
+                        //class for the course is available
+                        //cls find by courseId
+                        if (cls) {
+                            //now update the classId of this time
+                            await trx('class_times')
+                                .update({classId: cls.id})
+                                .where('id', '=', time.id);
+
+                        } else {
+                            //now crate the class
+
+                            let clsId = faker.random.alphaNumeric(6);
+
+                            await trx('classes')
+                                .insert({teacherId, courseId, id: clsId});
+
+                            await trx('class_times')
+                                .update({classId: clsId})
+                                .where('id', '=', time.id);
+
+                        }
+                    } else {
+                        await trx('classes')
+                            .update({teacherId, courseId})
+                            .where({id: classId});
+                    }
+                } catch (er) {
+                    console.log('er', er)
+                }
+
+                trx.commit();
+
+                return res.json({status: 'success', message: 'Updated'});
+
+            } else {
+                let timesWithClass = times.map((item => ({...item, classId: classId})));
+
+                await trx('class_times').insert(timesWithClass);
+
+                trx.commit();
+            }
+
 
             return res.json({status: 'success', message: 'Class created'});
 
         } catch (error) {
             trx.rollback();
-            return res.json({status: 'failed', error: error});
+            return res.status(500).json({status: 'failed', error: error});
         }
 
     } else {
@@ -451,18 +500,39 @@ const viewRoutine = async (req, res) => {
         'ct.id as classTimeId'
     )
 
-    res.json(classes);
+    routine.semesters = await db('semesters')
+        .select('id', 'shortName', 'name')
+        .whereIn('id', routine.semesters.split(','));
+
+    res.json({routine, classes});
 
 }
 
+const getClassInfo = async (req, res) => {
+
+    let {routineId, courseId} = req.params;
+
+    let cls = await db('classes')
+        .select('classes.id', 'users.id as teacherId', 'users.firstName', 'users.lastName')
+        .join('users', 'users.id', '=', 'classes.teacherId')
+        .where('classes.courseId', '=', courseId)
+        .where('routineId', routineId)
+        .first();
+
+    if (!cls) {
+        return res.status(404).json('not found');
+    }
+
+    return res.json(cls);
+}
 
 module.exports = {
-    createRoutine,
+    createOrUpdateRoutine,
     getRoutines,
-    update,
     deleteRoutine,
     addClass,
     viewRoutine,
     updateClass,
-    activateOrDeactivate
+    activateOrDeactivate,
+    getClassInfo,
 }

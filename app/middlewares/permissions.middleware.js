@@ -1,6 +1,6 @@
 const permissionService = require('../services/permission.service')
 
-const hasPermission = (perm) => {
+const hasPermission = (perm, userTypes) => {
     return async (req, res, next) => {
 
         let user = req.user;
@@ -9,7 +9,10 @@ const hasPermission = (perm) => {
             return next();
         }
 
-        return res.json('Do not have enough permission');
+        if(userTypes && userTypes.includes(user.userType)){
+            return next();
+        }
+        return res.status(403).json('Do not have enough permission');
 
     }
 }

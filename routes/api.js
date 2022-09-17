@@ -10,6 +10,7 @@ const semesterRoute = require("./semester.route");
 const fileRoute = require("./file.route");
 const groupRoute = require("./group.route");
 const messageRoute = require("./message.route");
+const questionRoute = require('./question.route');
 
 const routes = [
   {

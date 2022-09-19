@@ -11,7 +11,8 @@ exports.up = function(knex) {
       table.integer('semesterId').unsigned();
       table.timestamp('deletedAt').nullable();
 
-      table.foreign('semesterId').references('id').inTable('semesters');
+      table.foreign('semesterId').references('id').inTable('semesters')
+          .onDelete('cascade');
   })
 };
 

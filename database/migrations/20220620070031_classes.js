@@ -13,7 +13,7 @@ exports.up = function(knex) {
 
       table.foreign('routineId').references('id').inTable('routines').onDelete('cascade');
       table.foreign('courseId').references('id').inTable('courses').onDelete('cascade');
-      table.foreign('teacherId').references('id').inTable('users');
+      table.foreign('teacherId').references('id').inTable('users').onDelete('cascade');
 
   })
 };

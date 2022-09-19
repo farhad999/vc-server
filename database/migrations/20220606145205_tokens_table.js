@@ -10,7 +10,8 @@ exports.up = function(knex) {
     table.boolean('isBlackListed').defaultTo(false);
     table.timestamps();
 
-    table.foreign('userId').references('id').inTable('users');
+    table.foreign('userId').references('id').inTable('users')
+        .onDelete('cascade');
 
   });
 };

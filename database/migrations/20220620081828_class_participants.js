@@ -9,8 +9,8 @@ exports.up = function(knex) {
     table.integer('userId').unsigned();
     table.timestamps({defaultToNow: true, useCamelCase: true})
 
-    table.foreign('classId').references('id').inTable('classes');
-    table.foreign('userId').references('id').inTable('users');
+    table.foreign('classId').references('id').inTable('classes').onDelete('cascade');
+    table.foreign('userId').references('id').inTable('users').onDelete('cascade');
 
   })
 };

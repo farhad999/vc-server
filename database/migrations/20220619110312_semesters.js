@@ -7,8 +7,6 @@ exports.up = function(knex) {
       table.increments();
       table.string('name').notNullable();
       table.string('shortName').notNullable();
-      table.string('year');
-      table.string('semester');
   })
 };
 

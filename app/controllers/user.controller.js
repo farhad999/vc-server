@@ -16,14 +16,19 @@ const index = async (req, res) => {
 
     let userQuery = db('users')
         .select('users.id', 'users.firstName', 'users.lastName', 'users.email')
-        .where({userType: type})
-        .whereNull('deletedAt')
-        .orderBy('createdAt', 'desc')
+        .where('users.userType', '=', type)
+        .whereNull('users.deletedAt')
+        .orderBy('users.createdAt', 'desc');
 
     if (type === 'student') {
         userQuery.select('sd.session', 'sd.studentId', 'semesters.name as semesterName', '' +
             'semesters.id as semesterId').leftJoin('student_details as sd', 'sd.userId', '=', 'users.id')
             .join('semesters', 'semesters.id', '=', 'sd.semesterId');
+    } else {
+        userQuery.select('designations.name as designationName', 'designations.id as designationId',
+            'designations.rank', 'sd.joiningDate')
+            .leftJoin('stuff_details as sd', 'sd.userId', '=', 'users.id')
+            .join('designations', 'designations.id', '=', 'sd.designationId');
     }
 
     let users = await userQuery.paginate({perPage: perPage, currentPage: page, isLengthAware: true});
@@ -35,14 +40,17 @@ const index = async (req, res) => {
 const store = async (req, res) => {
 
     let schema = Joi.object({
+        id: Joi.number().optional(),
         firstName: Joi.string().required(),
         lastName: Joi.string().required(),
         email: Joi.string().email({minDomainSegments: 2}).required(),
-        password: Joi.string(),
+        password: Joi.string().when('id', {is: Joi.exist(), then: Joi.disallow(), otherwise: Joi.required()}),
         userType: Joi.string().required(),
         studentId: Joi.string().optional(),
         session: Joi.string().when('studentId', {is: Joi.exist(), then: Joi.required(), otherwise: Joi.optional()}),
-        semesterId: Joi.number().when('studentId', {is: Joi.exist(), then: Joi.required(), otherwise: Joi.optional()})
+        semesterId: Joi.number().when('studentId', {is: Joi.exist(), then: Joi.required(), otherwise: Joi.optional()}),
+        designationId: Joi.number(),
+        joiningDate: Joi.string(),
     })
 
     let {error, value} = schema.validate(req.body);
@@ -50,7 +58,7 @@ const store = async (req, res) => {
 
     if (!error) {
 
-        let {userType, firstName, lastName, email, password} = value;
+        let {id, userType, firstName, lastName, email} = value;
 
         //protect duplicate email
 
@@ -58,104 +66,89 @@ const store = async (req, res) => {
             .where({email: email})
             .first();
 
-        if (user) {
-            return res.json({status: 'failed', message: 'User already registered with this email'});
-        }
+        if (id) {
+            //then update user data
+            if (!user) {
+                return res.json({status: 'failed', message: 'Update Failed User does not exist'});
+            }
 
+            try {
+                await db.transaction(async trx => {
 
-        password = hashPassword.hash(password);
+                    await trx('users').update({
+                        firstName: firstName,
+                        lastName: lastName,
+                        email: email
+                    }).where({id});
 
-        try {
-            await db.transaction(async trx => {
+                    if (value.hasOwnProperty('studentId')) {
 
-                const inserts = await trx('users').insert({
-                    firstName: firstName,
-                    lastName: lastName,
-                    email: email,
-                    password: password,
-                    userType: userType,
+                        let {studentId, session, semesterId} = value;
+
+                        await trx('student_details')
+                            .update({studentId, session, semesterId})
+                            .where({userId: id});
+
+                    }
+
+                    if (userType === 'teacher' || userType === 'stuff') {
+                        let {designationId, joiningDate} = value;
+                        await trx('stuff_details')
+                            .update({designationId, joiningDate})
+                            .where('userId', '=', user.id);
+                    }
+
+                    return res.json({status: 'success', 'message': 'Updated Successfully'})
                 })
 
-                if (value.hasOwnProperty('studentId')) {
+            } catch (error) {
 
-                    let {studentId, session, semesterId} = value;
+                return res.json({status: 'failed', error: error});
+            }
 
-                    await trx('student_details')
-                        .insert({studentId, session, semesterId, userId: inserts[0]});
+        } else {
+            //insert user data
 
-                }
+            if (user) {
+                return res.json({status: 'failed', message: 'User Already exists with this email'});
+            }
 
-                return res.json({status: 'success', 'message': 'Added Successfully'})
-            })
+            let password = hashPassword.hash(value.password);
 
-        } catch (error) {
+            try {
+                await db.transaction(async trx => {
 
-            return res.json({status: 'failed', error: error});
-        }
+                    const inserts = await trx('users').insert({
+                        firstName: firstName,
+                        lastName: lastName,
+                        email: email,
+                        password: password,
+                        userType: userType,
+                    })
 
+                    if (value.hasOwnProperty('studentId')) {
 
-    } else {
-        return res.json({status: 'failed', error: error})
-    }
+                        let {studentId, session, semesterId} = value;
 
-}
+                        await trx('student_details')
+                            .insert({studentId, session, semesterId, userId: inserts[0]});
 
+                    }
 
-const update = async (req, res) => {
+                    if (userType === 'teacher' || userType === 'stuff') {
+                        let {designationId, joiningDate} = value;
+                        await trx('stuff_details')
+                            .insert({designationId, joiningDate, userId: inserts[0]});
+                    }
 
-    let schema = Joi.object({
-        firstName: Joi.string().required(),
-        lastName: Joi.string().required(),
-        email: Joi.string().email({minDomainSegments: 2}).required(),
-        studentId: Joi.string().optional(),
-        session: Joi.string().when('studentId', {is: Joi.exist(), then: Joi.required(), otherwise: Joi.optional()}),
-        semesterId: Joi.number().when('studentId', {is: Joi.exist(), then: Joi.required(), otherwise: Joi.optional()})
-    })
+                    return res.json({status: 'success', 'message': 'Added Successfully'})
+                })
 
-    let {error, value} = schema.validate(req.body);
+            } catch (error) {
 
-    let {id} = req.params;
+                return res.json({status: 'failed', error: error});
+            }
 
-
-    if (!error) {
-
-        let {firstName, lastName, email} = value;
-
-        //protect duplicate email
-
-        let user = await db('users')
-            .where({id})
-            .first();
-
-        if (!user) {
-            return res.json({status: 'failed', message: 'No User registered with this email'});
-        }
-
-        try {
-            await db.transaction(async trx => {
-
-                await trx('users').update({
-                    firstName: firstName,
-                    lastName: lastName,
-                    email: email
-                }).where({id});
-
-                if (value.hasOwnProperty('studentId')) {
-
-                    let {studentId, session, semesterId} = value;
-
-                    await trx('student_details')
-                        .update({studentId, session, semesterId})
-                        .where({userId: id});
-
-                }
-
-                return res.json({status: 'success', 'message': 'Updated Successfully'})
-            })
-
-        } catch (error) {
-
-            return res.json({status: 'failed', error: error});
         }
 
 
@@ -183,7 +176,6 @@ const deleteUser = async (req, res) => {
 
 module.exports = {
     store,
-    update,
     deleteUser,
     index,
 }

@@ -1,12 +1,14 @@
 /**
  * @param { import("knex").Knex } knex
- * @returns { Promise<void> } 
+ * @returns { Promise<void> }
  */
-exports.seed = async function(knex) {
-  // Deletes ALL existing entries
-  await knex('user_permissions').del()
+exports.seed = async function (knex) {
+    // Deletes ALL existing entries
+    await knex('user_permissions').del()
+    /*
+    await knex('user_permissions').insert([
+      {userId: 2, permissionId:1},
+    ]);
 
-  await knex('user_permissions').insert([
-    {userId: 2, permissionId:1},
-  ]);
+     */
 };

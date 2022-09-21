@@ -25,13 +25,16 @@ const authAttempt = async (loginData, guard = 'default') => {
             .where({email: email})
             .first();
 
-        let dbPass = user.password;
-        let checked = hashService.compare(password, dbPass);
-
-        if (user && checked) {
-            token = await tokenService.generateToken(user.id);
+        if (user) {
+            let dbPass = user.password;
+            let checked = hashService.compare(password, dbPass);
+            if (checked) {
+                token = await tokenService.generateToken(user.id)
+            }else{
+                error="Password is incorrect";
+            }
         } else {
-            error = "Email or Password Incorrect";
+            error = "No account found with this email";
         }
     }
 

@@ -5,7 +5,7 @@ const index = async (req, res) => {
 
     //sn = semester short name
 
-    let {page, q, sn, semesterId} = req.query;
+    let {page, q, sn, semesterId, paginate} = req.query;
 
 
     if (!page) {
@@ -21,21 +21,30 @@ const index = async (req, res) => {
     //where Like case-sensitive
     //whereILike case-insensitive
     if (q) {
-        dbQuery.whereILike('courseCode', `${q}%`)
-            .orWhereILike('courses.name', `%${q}%`)
+        dbQuery.where((query) => {
+            query.whereILike('courseCode', `${q}%`)
+                .orWhereILike('courses.name', `%${q}%`)
+        })
+
     }
 
-    if(sn){
+    if (sn) {
         dbQuery.where('semesters.shortName', '=', sn);
     }
 
-    if(semesterId){
-        dbQuery.where("semesterId", '=', semesterId);
+    if (semesterId) {
+        dbQuery.where("courses.semesterId", '=', semesterId);
     }
 
-    const data = await dbQuery.paginate({perPage: 10, isLengthAware: true, currentPage: page});
+    if (paginate === 'false') {
+        return res.json(await dbQuery);
+    }
 
-    return res.send(data);
+
+    const data = await dbQuery.paginate({perPage: 10, isLengthAware: true, currentPage: page});
+    return res.json(data);
+
+
 }
 
 const store = async (req, res) => {

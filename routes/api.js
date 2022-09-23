@@ -11,6 +11,7 @@ const fileRoute = require("./file.route");
 const groupRoute = require("./group.route");
 const messageRoute = require("./message.route");
 const questionRoute = require('./question.route');
+const dashboardRoute = require('./dashboard.route')
 
 const routes = [
   {
@@ -52,6 +53,10 @@ const routes = [
   {
     path: "/q",
     route: questionRoute,
+  },
+  {
+    path: '/home',
+    route: dashboardRoute,
   },
   {
     path: "/",

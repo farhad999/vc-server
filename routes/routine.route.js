@@ -7,6 +7,8 @@ const router = express.Router();
 
 //Todo fix bug for class updating
 
+router.get('/:routineId/classes/:classId/can_edit', auth, routineController.canEdit);
+
 router.put('/:routineId/classes/:classId', [auth, hasPermission('routine.create')], routineController.updateClass);
 
 router.post('/:routineId/classes', [auth, hasPermission('routine.create', ['teacher'])], routineController.addClass);
@@ -14,6 +16,8 @@ router.post('/:routineId/classes', [auth, hasPermission('routine.create', ['teac
 router.get('/:routineId/classes', [auth, hasPermission('routine.view', ['teacher'])], routineController.getRoutineClasses);
 
 router.get('/:routineId/:courseId', auth, routineController.getClassInfo);
+
+router.post('/:routineId/publish', [auth, hasPermission('routine.view', ['teacher'])], routineController.publish);
 
 router.get('/:routineId', [auth, hasPermission('routine.view', ['teacher'])], routineController.viewRoutine);
 

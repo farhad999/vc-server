@@ -464,8 +464,6 @@ const viewRoutine = async (req, res) => {
 
     let {routineId} = req.params;
 
-    let {semesterId} = req.query;
-
     let routine = await db('routines')
         .where({id: routineId})
         .first();
@@ -473,6 +471,21 @@ const viewRoutine = async (req, res) => {
     if (!routine) {
         return res.json({status: 'failed', error: 'Routine Not Found'});
     }
+
+    routine.semesters = await db('semesters')
+        .select('id', 'shortName', 'name')
+        .orderBy('shortName')
+        .whereIn('id', routine.semesters.split(','));
+
+    return res.json(routine)
+
+}
+
+const getRoutineClasses = async (req, res) => {
+
+    let {routineId} = req.params;
+
+    let {semesterId} = req.query;
 
     let classQuery = db('classes')
 
@@ -500,12 +513,7 @@ const viewRoutine = async (req, res) => {
         'ct.id as classTimeId'
     )
 
-    routine.semesters = await db('semesters')
-        .select('id', 'shortName', 'name')
-        .whereIn('id', routine.semesters.split(','));
-
-    res.json({routine, classes});
-
+    res.json(classes);
 }
 
 const getClassInfo = async (req, res) => {
@@ -535,4 +543,5 @@ module.exports = {
     updateClass,
     activateOrDeactivate,
     getClassInfo,
+    getRoutineClasses,
 }

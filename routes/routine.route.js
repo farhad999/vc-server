@@ -5,13 +5,17 @@ const routineController = require('../app/controllers/routine.controller')
 
 const router = express.Router();
 
+//Todo fix bug for class updating
+
 router.put('/:routineId/classes/:classId', [auth, hasPermission('routine.create')], routineController.updateClass);
 
-router.post('/:routineId/classes', [auth, hasPermission('routine.create')], routineController.addClass);
+router.post('/:routineId/classes', [auth, hasPermission('routine.create', ['teacher'])], routineController.addClass);
+
+router.get('/:routineId/classes', [auth, hasPermission('routine.view', ['teacher'])], routineController.getRoutineClasses);
 
 router.get('/:routineId/:courseId', auth, routineController.getClassInfo);
 
-router.get('/:routineId', [auth, hasPermission('routine.view')], routineController.viewRoutine);
+router.get('/:routineId', [auth, hasPermission('routine.view', ['teacher'])], routineController.viewRoutine);
 
 router.put('/:routineId/activate-deactivate', [auth, hasPermission('routine.update')], routineController.activateOrDeactivate);
 

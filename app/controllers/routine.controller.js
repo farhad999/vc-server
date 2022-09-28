@@ -4,6 +4,7 @@ const moment = require("../../config/moment");
 const {faker} = require("@faker-js/faker");
 const routineService = require('../services/routine.service');
 const logger = require('../../config/logger');
+const {nanoid} = require("nanoid");
 
 const createOrUpdateRoutine = async (req, res) => {
 
@@ -96,6 +97,84 @@ const activateOrDeactivate = async (req, res) => {
     }
 
     return res.json({status: 'success', message: 'Deactivate Successfully'});
+}
+
+const publish = async (req, res) => {
+
+    let {routineId} = req.params;
+
+    let routine = await db('routines')
+        .where('id', '=', routineId)
+        .first();
+
+    if (!routine) {
+        return res.json({status: 'failed', message: 'Routine Not Found'});
+    }
+
+    //if routine already published
+
+    if (routine.publish) {
+        return res.json({status: 'info', message: 'Routine Already Published'})
+    }
+
+    //else publish
+
+    //create classroom and add teacher and student as participants
+
+    const classes = await db('routine_classes')
+        .distinct()
+        .select('courseId', 'teacherId', 'routineId')
+        .where('routineId', '=', routineId);
+
+    //now create classroom
+
+    const trxProvider = db.transactionProvider();
+    const trx = await trxProvider();
+
+    try {
+
+        await trx('routines')
+            .update({publish: new Date()})
+            .where('id',  '=', routineId);
+
+        for (let cls of classes) {
+            console.log('cls', cls);
+            let id = nanoid(10);
+            await trx('classes')
+                .insert({id, ...cls})
+
+            //now add participants
+
+            const course = await trx('courses')
+                .where('id', '=', cls.courseId)
+                .first();
+
+            //now get all students from current semester
+
+            const students = await trx('users')
+                .join('student_details as sd', 'sd.userId', '=', 'users.id')
+                .where('sd.semesterId', '=', course.semesterId);
+
+            let participants = students.map(st =>({userId: st.id, classId: id}));
+
+            console.log('participants', participants, cls);
+
+            participants = [...participants, {userId: cls.teacherId, classId: id}];
+
+            await trx('class_participants')
+                .insert(participants);
+
+
+        }
+        trx.commit();
+        res.json({status: 'success', message: 'Published'});
+
+    } catch (er) {
+        trx.rollback();
+        return res.status(500).json({message: er.message});
+    }
+
+
 }
 
 const deleteRoutine = async (req, res) => {

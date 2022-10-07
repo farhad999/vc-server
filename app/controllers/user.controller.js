@@ -4,7 +4,7 @@ const hashPassword = require('../services/hash.service')
 
 const index = async (req, res) => {
 
-    let {type, page, perPage} = req.query;
+    let {type, page, perPage, q, semesterId, designationId} = req.query;
 
     if (!page) {
         page = 1;
@@ -24,11 +24,25 @@ const index = async (req, res) => {
         userQuery.select('sd.session', 'sd.studentId', 'semesters.name as semesterName', '' +
             'semesters.id as semesterId').leftJoin('student_details as sd', 'sd.userId', '=', 'users.id')
             .join('semesters', 'semesters.id', '=', 'sd.semesterId');
+        //only for student
+        if(semesterId){
+            userQuery.where('semesters.id', '=', semesterId);
+        }
+
     } else {
         userQuery.select('designations.name as designationName', 'designations.id as designationId',
             'designations.rank', 'sd.joiningDate')
             .leftJoin('stuff_details as sd', 'sd.userId', '=', 'users.id')
             .join('designations', 'designations.id', '=', 'sd.designationId');
+
+        if(designationId){
+            userQuery.where('designations.id', '=', designationId);
+        }
+    }
+
+    if (q) {
+        userQuery.whereILike('firstName', q + '%')
+            .orWhereILike('lastName', q + '%')
     }
 
     let users = await userQuery.paginate({perPage: perPage, currentPage: page, isLengthAware: true});

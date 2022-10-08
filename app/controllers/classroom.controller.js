@@ -88,14 +88,7 @@ const postAttendance = async (req, res) => {
         return res.json({status: 'failed', message: 'Have not enough permission'});
     }
 
-    let prevAtt = await db('class_attendances')
-        .where('date', '=', date)
-        .where('classId', '=', classId)
-        .first();
 
-    if (prevAtt) {
-        return res.json({status: 'failed', message: 'Attendance Already Added for this date'});
-    }
 
     const schema = Joi.object({
         date: Joi.string().required(),
@@ -110,6 +103,15 @@ const postAttendance = async (req, res) => {
     if (!error) {
 
         let {students, date} = value;
+
+        let prevAtt = await db('class_attendances')
+            .where('date', '=', date)
+            .where('classId', '=', classId)
+            .first();
+
+        if (prevAtt) {
+            return res.json({status: 'failed', message: 'Attendance Already Added for this date'});
+        }
 
         let data = students.map(student => {
             student.classId = classId;

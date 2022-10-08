@@ -55,6 +55,6 @@ router.get('/:classId/assignments', auth, hasAccessInClass, classroomController.
 router.get('/:classId', [auth, checkUserType(['student', 'teacher']), hasAccessInClass], classroomController.index);
 
 
-router.get('/', [auth, checkUserType(['student', 'teacher'])], classroomController.classes);
+router.get('/', auth, classroomController.classes);
 
 module.exports = router;

@@ -21,9 +21,11 @@ const index = async (req, res) => {
         .orderBy('users.createdAt', 'desc');
 
     if (type === 'student') {
-        userQuery.select('sd.session', 'sd.studentId', 'semesters.name as semesterName', '' +
-            'semesters.id as semesterId').leftJoin('student_details as sd', 'sd.userId', '=', 'users.id')
-            .join('semesters', 'semesters.id', '=', 'sd.semesterId');
+        userQuery.select( 'sd.studentId', 'semesters.name as semesterName', '' +
+            'semesters.id as semesterId', 'sessions.id as sessionId', 'sessions.name as session').leftJoin('student_details as sd', 'sd.userId', '=', 'users.id')
+            .join('semesters', 'semesters.id', '=', 'sd.semesterId')
+            .join('sessions', 'sessions.id', '=', 'sd.sessionId')
+        ;
         //only for student
         if(semesterId){
             userQuery.where('semesters.id', '=', semesterId);
@@ -61,7 +63,7 @@ const store = async (req, res) => {
         password: Joi.string().when('id', {is: Joi.exist(), then: Joi.disallow(), otherwise: Joi.required()}),
         userType: Joi.string().required(),
         studentId: Joi.string().optional(),
-        session: Joi.string().when('studentId', {is: Joi.exist(), then: Joi.required(), otherwise: Joi.optional()}),
+        sessionId: Joi.number().when('studentId', {is: Joi.exist(), then: Joi.required(), otherwise: Joi.optional()}),
         semesterId: Joi.number().when('studentId', {is: Joi.exist(), then: Joi.required(), otherwise: Joi.optional()}),
         designationId: Joi.number(),
         joiningDate: Joi.string(),
@@ -97,10 +99,10 @@ const store = async (req, res) => {
 
                     if (value.hasOwnProperty('studentId')) {
 
-                        let {studentId, session, semesterId} = value;
+                        let {studentId, sessionId, semesterId} = value;
 
                         await trx('student_details')
-                            .update({studentId, session, semesterId})
+                            .update({studentId, sessionId, semesterId})
                             .where({userId: id});
 
                     }
@@ -142,10 +144,10 @@ const store = async (req, res) => {
 
                     if (value.hasOwnProperty('studentId')) {
 
-                        let {studentId, session, semesterId} = value;
+                        let {studentId, sessionId, semesterId} = value;
 
                         await trx('student_details')
-                            .insert({studentId, session, semesterId, userId: inserts[0]});
+                            .insert({studentId, sessionId, semesterId, userId: inserts[0]});
 
                     }
 

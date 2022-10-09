@@ -1,14 +1,27 @@
 const db = require("../../config/database");
 const Joi = require("joi");
 const {nanoid} = require("nanoid");
+
 const getConversationList = async (req, res) => {
 
     const user = req.user;
 
+
     const conversations = await db('conversations')
-        .select('conversations.*')
+        .select('conversations.id', 'conversations.name', 'conversations.type',
+            cb => cb.from('conversation_participants as cp2').select(db.raw("concat(firstName, ' ' ,lastName)"))
+                .join('users', 'users.id', '=', 'cp2.userId')
+                .where('conversations.id', '=', db.ref('cp2.conversationId'))
+                .where('cp2.userId', '<>', user.id)
+                .first().as('receiverName'),
+            cb=>cb.from('messages as m').select('createdAt')
+                .where('m.conversationId', '=', db.ref('cp.conversationId'))
+                .orderBy('createdAt', 'desc').first().as('lastMessageTime')
+        )
         .join('conversation_participants as cp', 'cp.conversationId', '=', 'conversations.id')
+        .orderByRaw('lastMessageTime desc')
         .where("cp.userId", '=', user.id);
+
 
     return res.json(conversations);
 }
@@ -56,11 +69,29 @@ const viewConversation = async (req, res) => {
 
     let {page} = req.query;
 
+    const user = req.user;
+
     page = parseInt(page);
 
     const conversation = await db('conversations')
         .where('id', '=', id)
         .first();
+
+    let participants, receiver;
+
+    if (conversation.type === 'group') {
+
+        participants = await db('conversation_participants as cp')
+            .join('users', 'users.id', '=', 'cp.userId')
+            .where('cp.conversationId', '=', id);
+    } else {
+        receiver = await db('conversation_participants as cp')
+            .join('users', 'users.id', '=', 'cp.userId')
+            .where('cp.conversationId', '=', id)
+            .where('cp.userId', '<>', user.id)
+            .first();
+        conversation.name = receiver.firstName + ' ' + receiver.lastName;
+    }
 
     const messages = await db('messages')
         .select('messages.*', 'users.firstName', 'users.lastName', 'users.id as userId')
@@ -69,7 +100,7 @@ const viewConversation = async (req, res) => {
         .orderBy('createdAt', 'desc')
         .paginate({perPage: 10, currentPage: page, isLengthAware: true});
 
-    return res.json({conversation, messageData: messages})
+    return res.json({conversation, messageData: messages, participants})
 }
 
 const start = async (req, res) => {

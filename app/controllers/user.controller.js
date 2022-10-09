@@ -4,7 +4,8 @@ const hashPassword = require('../services/hash.service')
 
 const index = async (req, res) => {
 
-    let {type, page, perPage, q, semesterId, designationId} = req.query;
+    let {type, page, perPage, q, semesterId,
+        designationId, disablePaginate, sessionId} = req.query;
 
     if (!page) {
         page = 1;
@@ -21,14 +22,18 @@ const index = async (req, res) => {
         .orderBy('users.createdAt', 'desc');
 
     if (type === 'student') {
-        userQuery.select( 'sd.studentId', 'semesters.name as semesterName', '' +
+        userQuery.select('sd.studentId', 'semesters.name as semesterName', '' +
             'semesters.id as semesterId', 'sessions.id as sessionId', 'sessions.name as session').leftJoin('student_details as sd', 'sd.userId', '=', 'users.id')
             .join('semesters', 'semesters.id', '=', 'sd.semesterId')
             .join('sessions', 'sessions.id', '=', 'sd.sessionId')
         ;
         //only for student
-        if(semesterId){
+        if (semesterId) {
             userQuery.where('semesters.id', '=', semesterId);
+        }
+
+        if(sessionId){
+            userQuery.where('sd.sessionId', '=', sessionId);
         }
 
     } else {
@@ -37,7 +42,7 @@ const index = async (req, res) => {
             .leftJoin('stuff_details as sd', 'sd.userId', '=', 'users.id')
             .join('designations', 'designations.id', '=', 'sd.designationId');
 
-        if(designationId){
+        if (designationId) {
             userQuery.where('designations.id', '=', designationId);
         }
     }
@@ -47,9 +52,15 @@ const index = async (req, res) => {
             .orWhereILike('lastName', q + '%')
     }
 
-    let users = await userQuery.paginate({perPage: perPage, currentPage: page, isLengthAware: true});
+    if (disablePaginate) {
+        let users = await userQuery;
+        console.log('users', users);
+        return res.json(users);
+    } else {
 
-    return res.json(users);
+        let users = await userQuery.paginate({perPage: perPage, currentPage: page, isLengthAware: true});
+        return res.json(users);
+    }
 
 };
 
@@ -190,8 +201,56 @@ const deleteUser = async (req, res) => {
 
 }
 
+const promoteStudents = async (req, res) => {
+
+    const schema = Joi.object({
+        students: Joi.array().required(),
+        sessionFrom: Joi.number().required(),
+        sessionTo: Joi.number().required(),
+        semesterFrom: Joi.number().required(),
+        semesterTo: Joi.number().required(),
+    });
+
+    const {error, value} = schema.validate(req.body);
+
+    if (!error) {
+
+        let {sessionFrom, sessionTo, semesterFrom, semesterTo, students} = value;
+
+        const promotionData = students.map(item => ({userId: item, semesterFrom, semesterTo, sessionFrom, sessionTo}));
+
+        const trxProvider = db.transactionProvider();
+
+        const trx = await trxProvider();
+
+        try {
+            await trx('student_promotions')
+                .insert(promotionData);
+
+            for (let studentId of students) {
+                await trx('student_details')
+                    .update({sessionId: sessionTo, semesterId: semesterTo})
+                    .where('userId', '=', studentId);
+            }
+
+            trx.commit();
+
+            return res.json({status: 'success', message: 'Successfully Promoted'})
+        } catch (er) {
+            trx.rollback();
+            return res.status(500).json({message: 'Server error: ' + er.message});
+        }
+
+
+    } else {
+        return res.json({status: 'failed', message: error.message})
+    }
+
+}
+
 module.exports = {
     store,
     deleteUser,
     index,
+    promoteStudents,
 }

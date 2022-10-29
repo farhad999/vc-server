@@ -152,8 +152,11 @@ const publish = async (req, res) => {
             //now get all students from current semester
 
             const students = await trx('users')
+                .select('users.id')
                 .join('student_details as sd', 'sd.userId', '=', 'users.id')
                 .where('sd.semesterId', '=', course.semesterId);
+
+                console.log('students', students);
 
             let participants = students.map(st =>({userId: st.id, classId: id}));
 

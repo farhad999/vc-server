@@ -26,6 +26,8 @@ const index = async (req, res) => {
 
 const classes = async (req, res) => {
 
+    //Todo show all classes not only classes in which user joined
+
     let user = req.user;
 
     let activeRoutine = await db('routines')

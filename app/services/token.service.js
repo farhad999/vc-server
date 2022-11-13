@@ -5,6 +5,7 @@ const config = require("../../config/app.config");
 const generateToken = async (userId, guard) => {
   const payload = {
     userId: userId,
+    guard,
   };
 
   let token = jwt.sign(payload, config.JWT_SECRET_KEY, {
@@ -32,7 +33,7 @@ const verifyToken = async (req, guard) => {
           token: token,
           isBlackListed: false,
           userId: verify.userId,
-          guard,
+          //guard,
         })
         .first();
 

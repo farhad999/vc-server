@@ -20,28 +20,6 @@ const login = async (req, res) => {
 
 }
 
-const getUser = async (req, res) => {
-
-    const user = req.user;
-
-    /*let [role, permissions] = await permissionService.getUserPermissions(user.id);
-
-    user.role = role;
-    user.permissions = permissions;*/
-
-    res.json({user: user});
-}
-
-const logout = async (req, res) => {
-    let [status, error] = await authService.logout(req);
-    if(error){
-        return res.json({status: 'failed', message: error.message})
-    }
-    return res.json({status: 'success', message: 'Logout Successful'});
-}
-
 module.exports = {
-    login,
-    getUser,
-    logout,
+    login
 }

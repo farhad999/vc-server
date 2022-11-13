@@ -7,8 +7,10 @@ return async (req, res, next) => {
 
     const [verified, error] = await tokenService.verifyToken(req, guard);
 
+    console.log({verified})
+
     if (verified) {
-        req.user = await authService.getAuthUser(verified.userId, guard);
+        req.user = await authService.getAuthUser(verified.userId, verified.guard);
         return next();
     } else {
         // Access Denied

@@ -32,8 +32,6 @@ const authAttempt = async (loginData, guard = 'default') => {
             let dbPass = user.password;
             let checked = hashService.compare(password, dbPass);
 
-            console.log("checked", checked);
-
             if (checked) {
                 token = await tokenService.generateToken(user.id, guard)
             }else{

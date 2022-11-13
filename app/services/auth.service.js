@@ -29,7 +29,7 @@ const authAttempt = async (loginData, guard = 'default') => {
             let dbPass = user.password;
             let checked = hashService.compare(password, dbPass);
             if (checked) {
-                token = await tokenService.generateToken(user.id)
+                token = await tokenService.generateToken(user.id, guard)
             }else{
                 error="Password is incorrect";
             }

@@ -1,13 +1,15 @@
 const tokenService = require('../services/token.service');
 const authService = require('../services/auth.service');
 
-const auth = async (req, res, next) => {
+const auth = (guard = 'default') =>{
 
-    const [verified, error] = await tokenService.verifyToken(req, 'bearer');
+return async (req, res, next) => {
+
+    const [verified, error] = await tokenService.verifyToken(req, 'bearer', guard);
 
     if (verified) {
 
-        req.user = await authService.getAuthUser(verified.userId);
+        req.user = await authService.getAuthUser(verified.userId, guard);
 
         return next();
     } else {
@@ -15,6 +17,7 @@ const auth = async (req, res, next) => {
         return res.status(401).send('UnAuthorized');
     }
 
+}
 }
 
 module.exports = auth;

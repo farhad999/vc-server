@@ -9,9 +9,9 @@ const router = express.Router();
 
 router.post('/login', authController.login);
 
-router.get('/user', auth, authController.getUser);
+router.get('/user', auth(), authController.getUser);
 
-router.post("/logout", auth, authController.logout);
+router.post("/logout", auth(), authController.logout);
 
 //designation
 

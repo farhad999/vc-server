@@ -2,7 +2,7 @@ const jwt = require("jsonwebtoken");
 const db = require("../../config/database");
 const config = require("../../config/app.config");
 
-const generateToken = async (userId) => {
+const generateToken = async (userId, guard) => {
   const payload = {
     userId: userId,
   };
@@ -11,14 +11,12 @@ const generateToken = async (userId) => {
     expiresIn: config.JWT_EXPIRES_DAY,
   });
 
-  await db("tokens").insert({ token: token, userId: userId });
-
-  await db("tokens").insert({ token: token, userId: userId });
+  await db("tokens").insert({ token: token, userId: userId, guard });
 
   return token;
 };
 
-const verifyToken = async (req, tokenType) => {
+const verifyToken = async (req, tokeType, guard) => {
   const bearerHeader = req.headers["authorization"];
 
   const token = bearerHeader && bearerHeader.split(" ")[1];
@@ -34,6 +32,7 @@ const verifyToken = async (req, tokenType) => {
           token: token,
           isBlackListed: false,
           userId: verify.userId,
+          guard,
         })
         .first();
 

@@ -16,7 +16,7 @@ const generateToken = async (userId, guard) => {
   return token;
 };
 
-const verifyToken = async (req, tokeType, guard) => {
+const verifyToken = async (req, guard) => {
   const bearerHeader = req.headers["authorization"];
 
   const token = bearerHeader && bearerHeader.split(" ")[1];
@@ -36,8 +36,10 @@ const verifyToken = async (req, tokeType, guard) => {
         })
         .first();
 
+      console.log('token', validToken);
+
       if (!validToken) {
-        error = "Token is not valid";
+        error = {message:  "Token is not valid"};
       } else {
         verified = verify;
       }

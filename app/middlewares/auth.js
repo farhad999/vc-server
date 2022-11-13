@@ -5,12 +5,10 @@ const auth = (guard = 'default') =>{
 
 return async (req, res, next) => {
 
-    const [verified, error] = await tokenService.verifyToken(req, 'bearer', guard);
+    const [verified, error] = await tokenService.verifyToken(req, guard);
 
     if (verified) {
-
         req.user = await authService.getAuthUser(verified.userId, guard);
-
         return next();
     } else {
         // Access Denied

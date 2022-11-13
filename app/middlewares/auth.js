@@ -14,7 +14,7 @@ return async (req, res, next) => {
         return next();
     } else {
         // Access Denied
-        return res.status(401).send('UnAuthorized');
+        return res.status(401).json({message: error.message});
     }
 
 }

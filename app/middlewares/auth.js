@@ -11,6 +11,7 @@ return async (req, res, next) => {
 
     if (verified) {
         req.user = await authService.getAuthUser(verified.userId, verified.guard);
+        req.user.guard = verified.guard;
         return next();
     } else {
         // Access Denied

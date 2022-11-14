@@ -32,8 +32,8 @@ const roleHasPermission = async (role, permission) => {
 const userHasPermission = async (permission, id) => {
     return db('permissions')
         .join('user_permissions', 'user_permissions.permissionId', '=', 'permissions.id')
-        .join('users', 'users.id', '=', 'user_permissions.userId')
-        .where({'users.id': id, 'permissions.name': permission})
+        .join('admin_users', 'admin_users.id', '=', 'user_permissions.userId')
+        .where({'admin_users.id': id, 'permissions.name': permission})
         .first();
 }
 
@@ -41,16 +41,16 @@ const getUserRole = async (userId) => {
     return db('roles')
         .select('roles.name')
         .join('user_roles', 'user_roles.roleId', '=', 'roles.id')
-        .join('users', 'users.id', '=', 'user_roles.userId')
-        .where({'users.id': userId})
+        .join('admin_users', 'admin_users.id', '=', 'user_roles.userId')
+        .where({'admin_users.id': userId})
         .first();
 }
 
 const hasRole = async (role, userId) => {
     return db('roles')
         .join('user_roles', 'user_roles.roleId', '=', 'roles.id')
-        .join('users', 'users.id', '=', 'user_roles.userId')
-        .where({'roles.name': role, 'users.id': userId})
+        .join('admin_users', 'admin_users.id', '=', 'user_roles.userId')
+        .where({'roles.name': role, 'admin_users.id': userId})
         .first();
 
 }
@@ -74,8 +74,8 @@ const getUserPermissions = async (id) => {
     let p = await db('permissions')
         .select('permissions.name')
         .join('user_permissions', 'user_permissions.permissionId', '=', 'permissions.id')
-        .join('users', 'users.id', '=', 'user_permissions.userId')
-        .where({'users.id': id});
+        .join('admin_users', 'admin_users.id', '=', 'user_permissions.userId')
+        .where({'admin_users.id': id});
 
     let combinedPerms = [...permissions, ...p].map(item=>item.name);
 

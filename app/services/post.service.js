@@ -83,7 +83,8 @@ const getPosts = async (req, res, type, typeKeyId) => {
         .where('attachable', '=', 'posts');
 
     data.map(item => {
-        item.attachments = attachments.filter(i => i.attachableId === item.id);
+        //use single equal because data type may be different
+        item.attachments = attachments.filter(i => i.attachableId == item.id);
         return item;
     });
 

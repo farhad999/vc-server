@@ -21,7 +21,7 @@ const index = async (req, res) => {
         return res.json({status: 'failed'});
     }
 
-    return res.json({cls:cls, user: {isMainTeacher: user.isMainTeacher, userType: user.userType}});
+    return res.json({cls: cls, user: {isMainTeacher: user.isMainTeacher, userType: user.userType}});
 }
 
 const classes = async (req, res) => {
@@ -34,13 +34,6 @@ const classes = async (req, res) => {
         .where('isActive', '=', true)
         .first();
 
-    console.log('active routine', activeRoutine);
-
-    let routineQuery = db('classes')
-        .join('class_participants as cp', 'cp.classId', '=', 'classes.id')
-        .where('cp.userId', '=', user.id);
-
-    //
     let activeClasses;
     let cls;
 
@@ -50,6 +43,7 @@ const classes = async (req, res) => {
             .join('class_participants as cp', 'cp.classId', '=', 'classes.id')
             .join('courses', 'courses.id', '=', 'classes.courseId')
             .where('cp.userId', '=', user.id).where('classes.routineId', '=', activeRoutine.id);
+
         cls = await db('classes')
             .select('classes.id', 'courses.name as courseName', 'courses.courseCode')
             .join('class_participants as cp', 'cp.classId', '=', 'classes.id')
@@ -75,7 +69,7 @@ const createPost = async (req, res) => {
 }
 
 const getPosts = async (req, res) => {
-   await postService.getPosts(req, res, 'class', 'classId');
+    await postService.getPosts(req, res, 'class', 'classId');
 }
 
 //Attendances
@@ -89,7 +83,6 @@ const postAttendance = async (req, res) => {
     if (!user.isMainTeacher) {
         return res.json({status: 'failed', message: 'Have not enough permission'});
     }
-
 
 
     const schema = Joi.object({
@@ -260,7 +253,7 @@ const createOrUpdateAssignment = async (req, res) => {
                             .insert({
                                 name: att.name,
                                 path: att.path,
-                                size: att.size,
+                                //size: att.size,
                                 attachable: 'assignment',
                                 attachableId: id,
                                 ownerId: user.id
@@ -302,7 +295,7 @@ const createOrUpdateAssignment = async (req, res) => {
                         .insert({
                             name: att.name,
                             path: att.path,
-                            size: att.size,
+                            //size: att.size,
                             attachable: 'assignment',
                             attachableId: id,
                             ownerId: user.id
@@ -435,6 +428,8 @@ const deleteAssignment = async (req, res) => {
 const submitClassWork = async (req, res) => {
     const {classId, a} = req.params;
 
+    console.log({a});
+
     let {user} = req;
 
     if (user.userType !== 'student') {
@@ -447,8 +442,11 @@ const submitClassWork = async (req, res) => {
         file.attachableId = a;
         file.attachable = 'student_work';
         file.ownerId = user.id;
+        delete file.size;
         return file;
     })
+
+    console.log({attachableFiles});
 
     const trxProvider = db.transactionProvider();
 

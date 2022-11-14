@@ -6,7 +6,7 @@ exports.up = function(knex) {
   return knex.schema.createTable("routines", (table)=> {
     table.increments();
     table.string('name');
-    table.enum('status', ['draft', 'final']);
+   // table.enum('status', ['draft', 'final']);
     table.boolean('isActive');
     table.integer('periodLength').notNullable();
     table.time('startTime').notNullable();

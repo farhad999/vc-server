@@ -4,6 +4,7 @@ const moment = require("../../config/moment");
 const {faker} = require("@faker-js/faker");
 const routineService = require('../services/routine.service');
 const logger = require('../../config/logger');
+const {nanoid} = require("nanoid");
 
 const createOrUpdateRoutine = async (req, res) => {
 
@@ -12,7 +13,6 @@ const createOrUpdateRoutine = async (req, res) => {
     const schema = Joi.object({
         id: Joi.number().optional(),
         name: Joi.string().default(monthYear),
-        status: Joi.string().default('draft'),
         startTime: Joi.string().required(),
         isActive: Joi.bool().default(false),
         periodLength: Joi.number().required(),
@@ -80,8 +80,8 @@ const activateOrDeactivate = async (req, res) => {
         .where('id', '=', routineId)
         .first();
 
-    if (routine.status !== 'final') {
-        return res.json({status: 'failed', message: 'Make Routine Final'})
+    if (!routine.publish) {
+        return res.json({status: 'failed', message: 'Publish Routine First'})
     }
 
     //first deactivate the active routine
@@ -97,6 +97,87 @@ const activateOrDeactivate = async (req, res) => {
     }
 
     return res.json({status: 'success', message: 'Deactivate Successfully'});
+}
+
+const publish = async (req, res) => {
+
+    let {routineId} = req.params;
+
+    let routine = await db('routines')
+        .where('id', '=', routineId)
+        .first();
+
+    if (!routine) {
+        return res.json({status: 'failed', message: 'Routine Not Found'});
+    }
+
+    //if routine already published
+
+    if (routine.publish) {
+        return res.json({status: 'info', message: 'Routine Already Published'})
+    }
+
+    //else publish
+
+    //create classroom and add teacher and student as participants
+
+    const classes = await db('routine_classes')
+        .distinct()
+        .select('courseId', 'teacherId', 'routineId')
+        .where('routineId', '=', routineId);
+
+    //now create classroom
+
+    const trxProvider = db.transactionProvider();
+    const trx = await trxProvider();
+
+    try {
+
+        await trx('routines')
+            .update({publish: new Date()})
+            .where('id',  '=', routineId);
+
+        for (let cls of classes) {
+            console.log('cls', cls);
+            let id = nanoid(10);
+            await trx('classes')
+                .insert({id, ...cls})
+
+            //now add participants
+
+            const course = await trx('courses')
+                .where('id', '=', cls.courseId)
+                .first();
+
+            //now get all students from current semester
+
+            const students = await trx('users')
+                .select('users.id')
+                .join('student_details as sd', 'sd.userId', '=', 'users.id')
+                .where('sd.semesterId', '=', course.semesterId);
+
+                console.log('students', students);
+
+            let participants = students.map(st =>({userId: st.id, classId: id}));
+
+            console.log('participants', participants, cls);
+
+            participants = [...participants, {userId: cls.teacherId, classId: id}];
+
+            await trx('class_participants')
+                .insert(participants);
+
+
+        }
+        trx.commit();
+        res.json({status: 'success', message: 'Published'});
+
+    } catch (er) {
+        trx.rollback();
+        return res.status(500).json({message: er.message});
+    }
+
+
 }
 
 const deleteRoutine = async (req, res) => {
@@ -141,6 +222,8 @@ const addClass = async (req, res) => {
 
     let {routineId} = req.params;
 
+    const user = req.user;
+
     let routine = await db('routines')
         .where({id: routineId})
         .first();
@@ -150,7 +233,7 @@ const addClass = async (req, res) => {
     }
 
     let schema = Joi.object({
-        id: Joi.string().optional(),
+        id: Joi.number().optional(),
         courseId: Joi.number().required(),
         teacherId: Joi.number().required(),
         times: Joi.array().items({
@@ -162,6 +245,7 @@ const addClass = async (req, res) => {
     });
 
     let {error, value} = schema.validate(req.body);
+
 
     if (!error) {
 
@@ -177,6 +261,12 @@ const addClass = async (req, res) => {
             return res.json({status: 'failed', error: 'Course does not exists'})
         }
 
+        //check if provided course is in routines
+
+        if (!routine.semesters.split(',').includes(course.semesterId.toString())) {
+            return res.json({status: 'failed', message: 'Semester of this course is not listed in routine'})
+        }
+
         //check is teacherId is exists
 
         let isTeacherExists = await db('users')
@@ -189,69 +279,47 @@ const addClass = async (req, res) => {
 
         //check if class already added in this routine
 
-        let cls = await db('classes')
-            .where({courseId: courseId, routineId: routineId})
-            .first();
+        let classes = await db('routine_classes')
+            .where({courseId: courseId, routineId: routineId});
 
         //class exists then append class times
 
-        let classId = "";
-
-        if (cls) {
-
-            //now check class times
-
-            classId = cls.id;
-
-            let classTimes = await db('class_times')
-                .where('classId', '=', cls.id);
-
-            if (!id && classTimes.length + times.length > course.credit) {
-                return res.json({
-                    status: 'failed',
-                    message: 'Number of class times can not be more than course credits!'
-                })
-            }
-
+        if (!id && classes.length > 0 && classes.length >= course.credit) {
+            return res.json({
+                status: 'failed',
+                message: 'Number of class times can not be more than course credits!'
+            })
         }
-
 
         //Time Overlap check
 
-        let timeExists = false;
-
         for (let time of times) {
+            const classEndTime = time.startTime + routine.periodLength * time.periods;
 
-            let classesInTheDayQuery = db('classes')
-                .select('classes.id', 'ct.day as day', 'ct.startTime',
-                    'ct.periods')
-                .join('class_times as ct', 'ct.classId', '=', 'classes.id')
-                .join('courses', 'courses.id', '=', 'classes.courseId')
-                .where({
-                    'ct.day': time.day, 'classes.routineId': routineId,
-                    'courses.semesterId': course.semesterId
+            const isRecordExistsQuery = db('routine_classes as rc')
+                .join('courses', 'courses.id', '=', 'rc.courseId')
+                .whereBetween('startTime', [time.startTime, classEndTime])
+                .where('day', '=', time.day)
+                .where('courses.semesterId', '=', course.semesterId);
+            //except current item
+
+            if (id) {
+                isRecordExistsQuery.whereNot('rc.id', '=', id);
+            }
+
+            let isRecordExists = await isRecordExistsQuery.first();
+
+            if (isRecordExists) {
+                return res.json({
+                    status: 'failed',
+                    message: 'Time overlap! One or more classes are already in this time range'
                 });
-
-            if (time.id) {
-                classesInTheDayQuery.whereNot('ct.id', '=', time.id);
             }
 
-            const classesInTheDay = await classesInTheDayQuery;
+            //check if day is in off day
 
-            for (let cls of classesInTheDay) {
-
-                let dbTimeRange = moment.rangeFromInterval('minutes', cls.periods * routine.periodLength, moment(cls.startTime, 'HH:mm:ss'));
-
-                let inputTimeRange = moment.rangeFromInterval('minutes', time.periods * routine.periodLength, moment(time.startTime, 'HH:mm'));
-
-                if (dbTimeRange.overlaps(inputTimeRange)) {
-                    timeExists = true;
-                }
-
-            }
-
-            if (timeExists) {
-                return res.json({status: 'failed', message: 'Time overlap! Please Check your time'});
+            if (routine.offDays.split(',').includes(time.day)) {
+                return res.json({status: 'failed', message: 'Provided day is a off day'});
             }
 
         }
@@ -264,82 +332,61 @@ const addClass = async (req, res) => {
 
         try {
 
-            if (!cls) {
-                classId = faker.random.alphaNumeric(10);
-                await trx('classes')
-                    .insert({id: classId, routineId, teacherId, courseId});
-            }
 
             if (id) {
                 //update
 
-                //update time
+                let time = times[0];
 
-                try {
+                //if try to change course id then check number of classes
 
-                    let time = times[0];
+                //get current class
 
-                    let {id, ...rest} = time;
+                let cls = await trx('routine_classes')
+                    .where('id', '=', id)
+                    .first();
 
-                    await trx('class_times').update(rest).where('id', '=', id);
-
-                    let cls1 = await db('classes')
-                        .where('id', '=', id)
-                        .first();
-
-                    if (cls1.courseId !== courseId) {
-                        //that mean course code needs to be updated
-                        //but class for that course might not be created
-
-                        //class for the course is available
-                        //cls find by courseId
-                        if (cls) {
-                            //now update the classId of this time
-                            await trx('class_times')
-                                .update({classId: cls.id})
-                                .where('id', '=', time.id);
-
-                        } else {
-                            //now crate the class
-
-                            let clsId = faker.random.alphaNumeric(6);
-
-                            await trx('classes')
-                                .insert({teacherId, courseId, id: clsId});
-
-                            await trx('class_times')
-                                .update({classId: clsId})
-                                .where('id', '=', time.id);
-
-                        }
-                    } else {
-                        await trx('classes')
-                            .update({teacherId, courseId})
-                            .where({id: classId});
+                if (cls.courseId !== courseId) {
+                    //course id to be updated
+                    // now check number of classes
+                    if (classes.length >= course.credit) {
+                        return res.json({
+                            status: 'failed',
+                            message: 'Number of classes can not be more than course credits'
+                        });
                     }
-                } catch (er) {
-                    console.log('er', er)
                 }
+
+                await trx('routine_classes').update({...time, routineId, courseId, teacherId, addedBy: user.id})
+                    .where('id', '=', id);
 
                 trx.commit();
 
                 return res.json({status: 'success', message: 'Updated'});
 
-            } else {
-                let timesWithClass = times.map((item => ({...item, classId: classId})));
 
-                await trx('class_times').insert(timesWithClass);
+            } else {
+
+                let timesWithClass = times.map((item => ({
+                    ...item,
+                    courseId,
+                    teacherId,
+                    routineId,
+                    addedBy: user.id
+                })));
+
+                await trx('routine_classes').insert(timesWithClass);
 
                 trx.commit();
+                return res.json({status: 'success', message: 'Class created'});
+
             }
 
 
-            return res.json({status: 'success', message: 'Class created'});
-
-        } catch (error) {
-            trx.rollback();
-            return res.status(500).json({status: 'failed', error: error});
+        } catch (er) {
+            return res.status(500).json({message: 'Server Error :' + er.message});
         }
+
 
     } else {
         return res.json({status: 'failed', error: error});
@@ -487,20 +534,18 @@ const getRoutineClasses = async (req, res) => {
 
     let {semesterId} = req.query;
 
-    let classQuery = db('classes')
-
-        .join('courses', 'courses.id', '=', 'classes.courseId')
+    let classQuery = db('routine_classes as rc')
+        .join('courses', 'courses.id', '=', 'rc.courseId')
         .join('semesters', 'semesters.id', '=', 'courses.semesterId')
-        .join('class_times as ct', 'ct.classId', '=', 'classes.id')
-        .join('users', 'users.id', '=', 'classes.teacherId')
-        .where({'classes.routineId': routineId});
+        .join('users', 'users.id', '=', 'rc.teacherId')
+        .where({'rc.routineId': routineId});
 
     if (semesterId) {
         classQuery.where('semesters.id', '=', semesterId);
     }
 
     let classes = await classQuery.select('courses.name as courseName',
-        'classes.id',
+        'rc.id',
         'courses.id as courseId',
         'users.id as teacherId',
         'courses.courseCode',
@@ -509,21 +554,21 @@ const getRoutineClasses = async (req, res) => {
         'users.lastName as teacherLastName',
         'semesters.shortName',
         'semesters.name as semesterName',
-        'ct.day as day', 'ct.startTime', 'ct.periods',
-        'ct.id as classTimeId'
+        'rc.day as day', 'rc.startTime', 'rc.periods',
+        'rc.id as classTimeId'
     )
 
     res.json(classes);
 }
 
-const getClassInfo = async (req, res) => {
+const getRoutineClassInfo = async (req, res) => {
 
     let {routineId, courseId} = req.params;
 
-    let cls = await db('classes')
-        .select('classes.id', 'users.id as teacherId', 'users.firstName', 'users.lastName')
-        .join('users', 'users.id', '=', 'classes.teacherId')
-        .where('classes.courseId', '=', courseId)
+    let cls = await db('routine_classes as rc')
+        .select('rc.id', 'users.id as teacherId', 'users.firstName', 'users.lastName')
+        .join('users', 'users.id', '=', 'rc.teacherId')
+        .where('rc.courseId', '=', courseId)
         .where('routineId', routineId)
         .first();
 
@@ -534,6 +579,37 @@ const getClassInfo = async (req, res) => {
     return res.json(cls);
 }
 
+const canEdit = async (req, res) => {
+
+    const {classId} = req.params;
+
+    const user = req.user;
+
+    const cls = await db('routine_classes')
+        .where("id", '=', classId)
+        .first();
+
+    const designationOfThisTeacher = await db('designations')
+        .join('stuff_details as sd', 'sd.designationId', '=', 'designations.id')
+        .where('sd.userId', '=', cls.teacherId)
+        .first();
+
+    const designationOfRequestedUser = await db('designations')
+        .join('stuff_details as sd', 'sd.designationId', '=', 'designations.id')
+        .where('sd.userId', '=', user.id)
+        .first();
+
+    //compare rank
+
+    let isBefore = moment(designationOfRequestedUser.joiningDate).isBefore(moment(designationOfThisTeacher.joiningDate));
+
+    if (designationOfRequestedUser.rank < designationOfThisTeacher.rank || isBefore) {
+        return res.json({status: 'success', message: 'Edit mode enabled'});
+    }
+
+    return res.json({status: 'failed', message: 'Sorry! The Teacher has higher rank than you.'});
+}
+
 module.exports = {
     createOrUpdateRoutine,
     getRoutines,
@@ -542,6 +618,8 @@ module.exports = {
     viewRoutine,
     updateClass,
     activateOrDeactivate,
-    getClassInfo,
+    getRoutineClassInfo,
     getRoutineClasses,
+    canEdit,
+    publish,
 }

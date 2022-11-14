@@ -5,10 +5,10 @@ const semesterController = require('../app/controllers/semester.controller')
 
 const router = require('express').Router();
 
-router.delete('/:id', auth, semesterController.deleteSemester);
+router.delete('/:id', auth('admin'), semesterController.deleteSemester);
 
-router.get('/', [auth, hasPermission('semester.view'), semesterController.index])
+router.get('/', auth('admin'), hasPermission('semester.view'), semesterController.index)
 
-router.post('/', auth, semesterController.createOrUpdate);
+router.post('/', auth('admin'), semesterController.createOrUpdate);
 
 module.exports = router;

@@ -5,12 +5,12 @@ const courseController = require('../app/controllers/course.controller');
 
 const router = express.Router();
 
-router.put('/:courseId', [auth, hasPermission('course.update')],  courseController.update);
+router.put('/:courseId', auth('admin'), hasPermission('course.update'),  courseController.update);
 
-router.delete('/:courseId', [auth, hasPermission('course.delete')],  courseController.deleteCourse);
+router.delete('/:courseId', auth('admin'), hasPermission('course.delete'),  courseController.deleteCourse);
 
-router.post('/', [auth, hasPermission('course.create')],  courseController.store);
+router.post('/', auth('admin'), hasPermission('course.create'),  courseController.store);
 
-router.get('/', [auth, hasPermission('course.view', ['teacher'])],  courseController.index);
+router.get('/', auth('admin'), hasPermission('course.view', ['teacher']),  courseController.index);
 
 module.exports = router;

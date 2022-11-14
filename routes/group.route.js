@@ -19,23 +19,23 @@ const storage = multer.diskStorage({
 
 const upload = multer({storage: storage});
 
-router.post('/:id/requests/:requestId/accept', auth, hasGroupAccess, groupController.acceptRequest);
+router.post('/:id/requests/:requestId/accept', auth(), hasGroupAccess, groupController.acceptRequest);
 
-router.delete('/:id/requests/:requestId', auth, hasGroupAccess, groupController.removeRequest);
+router.delete('/:id/requests/:requestId', auth(), hasGroupAccess, groupController.removeRequest);
 
-router.get('/:id/requests', auth, hasGroupAccess, groupController.requests);
+router.get('/:id/requests', auth(), hasGroupAccess, groupController.requests);
 
-router.get('/:id/members', auth, hasGroupAccess, groupController.getMembers);
+router.get('/:id/members', auth(), hasGroupAccess, groupController.getMembers);
 
-router.post('/:id/posts', auth, upload.array('files'), groupController.createPost);
+router.post('/:id/posts', auth(), upload.array('files'), groupController.createPost);
 
-router.get('/:id/posts', auth, groupController.getPosts);
+router.get('/:id/posts', auth(), groupController.getPosts);
 
-router.post('/:id/join', auth, groupController.joinRequest);
+router.post('/:id/join', auth(), groupController.joinRequest);
 
-router.get('/:id', auth, groupController.viewGroup);
+router.get('/:id', auth(), groupController.viewGroup);
 
-router.get('/', auth, groupController.getGroups)
-    .post('/', auth, groupController.createGroup);
+router.get('/', auth(), groupController.getGroups)
+    .post('/', auth(), groupController.createGroup);
 
 module.exports = router;

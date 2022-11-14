@@ -27,7 +27,7 @@ router.post('/sessions', auth('admin'), sessionController.createOrUpdate);
 
 router.get('/sessions', auth('admin'), sessionController.index);
 
-router.get('/mates', auth('admin'), mixController.getClassmates);
+router.get('/mates', auth(), mixController.getClassmates);
 
 //for download
 router.get("/down", (req, res) => {

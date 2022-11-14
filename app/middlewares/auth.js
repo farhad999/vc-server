@@ -1,20 +1,35 @@
 const tokenService = require('../services/token.service');
 const authService = require('../services/auth.service');
 
-const auth = async (req, res, next) => {
+const auth = (guard = 'default', strict = true) => {
 
-    const [verified, error] = await tokenService.verifyToken(req, 'bearer');
+    return async (req, res, next) => {
 
-    if (verified) {
+        const [verified, error] = await tokenService.verifyToken(req, guard);
 
-        req.user = await authService.getAuthUser(verified.userId);
+        //if not strict mode then return any auth user
+        //strict=true return user for specific guard
 
-        return next();
-    } else {
-        // Access Denied
-        return res.status(401).send('UnAuthorized');
+        if (verified) {
+            if (!strict) {
+                req.user = await authService.getAuthUser(verified.userId, verified.guard);
+                req.user.guard = verified.guard;
+                return next();
+            } else {
+                if (guard === verified['guard']) {
+                    req.user = await authService.getAuthUser(verified.userId, verified.guard);
+                    req.user.guard = verified.guard;
+                    return next();
+                } else {
+                    return res.status(401).json({message: error.message});
+                }
+            }
+        } else {
+            // Access Denied
+            return res.status(401).json({message: error.message});
+        }
+
     }
-
 }
 
 module.exports = auth;

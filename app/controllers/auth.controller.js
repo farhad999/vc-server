@@ -18,10 +18,12 @@ const getUser = async (req, res) => {
 
     const user = req.user;
 
-    let [role, permissions] = await permissionService.getUserPermissions(user.id);
+    if (user.guard === 'admin') {
+        let [role, permissions] = await permissionService.getUserPermissions(user.id);
 
-    user.role = role;
-    user.permissions = permissions;
+        user.role = role;
+        user.permissions = permissions;
+    }
 
     res.json({user: user});
 }

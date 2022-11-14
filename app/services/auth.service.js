@@ -11,13 +11,15 @@ const authAttempt = async (loginData, guard = 'default') => {
         password: Joi.string().required()
     });
 
-    let {error, value} = schema.validate(loginData);
+    let {error:validationError, value} = schema.validate(loginData);
 
     let {email, password} = value;
 
     let token;
 
-    if (!error) {
+    let error;
+
+    if (!validationError) {
 
         let authType = authConfig.find(item => item.guard === guard);
 
@@ -26,10 +28,12 @@ const authAttempt = async (loginData, guard = 'default') => {
             .first();
 
         if (user) {
+
             let dbPass = user.password;
             let checked = hashService.compare(password, dbPass);
+
             if (checked) {
-                token = await tokenService.generateToken(user.id)
+                token = await tokenService.generateToken(user.id, guard)
             }else{
                 error="Password is incorrect";
             }
@@ -38,15 +42,21 @@ const authAttempt = async (loginData, guard = 'default') => {
         }
     }
 
-    return [error, token];
+    return [error, token, validationError];
 }
 
 const getAuthUser = async (userId, guard = 'default') => {
 
-    let authType = authConfig.find(item => item.guard = guard);
+    let authType = authConfig.find(item => item.guard === guard);
+
+    let selectableField = ['id', 'firstName', 'lastName', 'email'];
+
+    if(guard === "default"){
+        selectableField.push('userType');
+    }
 
     return db(authType.table)
-        .select("id", "firstName", 'lastName', "email", "userType")
+        .select(selectableField)
         .where({id: userId})
         .first();
 }

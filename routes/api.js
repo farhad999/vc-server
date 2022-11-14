@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const defaultRoute = require("./default.route");
+const adminApiRoute = require('./admin/admin-api.route')
 const userRoute = require("./user.route");
 const fakerRoute = require("./faker.route");
 const courseRoute = require("./course.route");
@@ -61,7 +62,10 @@ const routes = [
   {
     path: "/",
     route: defaultRoute,
-  },
+  },{
+    path: '/admin',
+    route: adminApiRoute,
+  }
 ];
 
 routes.forEach((route) => {

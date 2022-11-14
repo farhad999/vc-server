@@ -2,23 +2,22 @@ const jwt = require("jsonwebtoken");
 const db = require("../../config/database");
 const config = require("../../config/app.config");
 
-const generateToken = async (userId) => {
+const generateToken = async (userId, guard) => {
   const payload = {
     userId: userId,
+    guard,
   };
 
   let token = jwt.sign(payload, config.JWT_SECRET_KEY, {
     expiresIn: config.JWT_EXPIRES_DAY,
   });
 
-  await db("tokens").insert({ token: token, userId: userId });
-
-  await db("tokens").insert({ token: token, userId: userId });
+  await db("tokens").insert({ token: token, userId: userId, guard });
 
   return token;
 };
 
-const verifyToken = async (req, tokenType) => {
+const verifyToken = async (req, guard) => {
   const bearerHeader = req.headers["authorization"];
 
   const token = bearerHeader && bearerHeader.split(" ")[1];
@@ -34,11 +33,14 @@ const verifyToken = async (req, tokenType) => {
           token: token,
           isBlackListed: false,
           userId: verify.userId,
+          //guard,
         })
         .first();
 
+      console.log('token', validToken);
+
       if (!validToken) {
-        error = "Token is not valid";
+        error = {message:  "Token is not valid"};
       } else {
         verified = verify;
       }

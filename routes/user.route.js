@@ -6,12 +6,12 @@ const userController = require('../app/controllers/user.controller')
 
 const router = express.Router();
 
-router.post('/promote_students', auth, userController.promoteStudents);
+router.post('/promote_students', auth('admin'), userController.promoteStudents);
 
-router.delete('/:id', [auth, hasPermission('user.delete')], userController.deleteUser);
+router.delete('/:id', auth('admin'), hasPermission('user.delete'), userController.deleteUser);
 
-router.post('/', [auth, hasPermission('user.create')], userController.store);
+router.post('/', auth('admin'), hasPermission('user.create'), userController.store);
 
-router.get('/', [auth, hasPermission('user.view')], userController.index );
+router.get('/', auth('admin'), hasPermission('user.view'), userController.index );
 
 module.exports = router;

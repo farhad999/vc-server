@@ -14,6 +14,7 @@ const messageRoute = require("./message.route");
 const questionRoute = require('./question.route');
 const dashboardRoute = require('./dashboard.route')
 const taskRoute = require('./task.route')
+const classRoute = require('./class.route')
 
 const routes = [
   {
@@ -62,6 +63,9 @@ const routes = [
   },{
     path: '/tasks',
     route: taskRoute,
+  },{
+    path: '/classes',
+    route: classRoute,
   },
   {
     path: "/",

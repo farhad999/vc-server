@@ -160,11 +160,14 @@ const updateAttendance = async (req, res) => {
 
 const getAttendances = async (req, res) => {
 
+    let {classId} = req.params;
+
     let attendances = await db('class_attendances as ca')
         .select('ca.id', 'users.id as userId', 'sd.studentId', 'users.firstName', 'users.lastName',
             'ca.isAttend', 'ca.date')
         .join('users', 'users.id', '=', 'ca.userId')
         .join('student_details as sd', 'sd.userId', '=', 'users.id')
+        .where('ca.classId', '=', classId)
         .orderBy('date');
 
     return res.json(attendances);
